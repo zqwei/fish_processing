@@ -296,11 +296,14 @@ def optimf(u0,varseg,gainseg,otfmask,Rs,R,alpha,iterationN):
     useg = np.zeros(u0seg.shape)#
     t = time.time()
     pool = mp.Pool(processes=8)
+    ####
+    # using *with* instead of their code
     results = [pool.apply_async(segoptim, args=(u0seg,varseg,gainseg,otfmask,alpha,iterationN,ind)) for ind in range(Ns*Ns)]
     outi = [p.get() for p in results]
     useg = np.array(outi)
     pool.close()
     pool.join()
+    ####
     elapsed = time.time()-t
     print('Elapsed time for noise reduction:', elapsed)
     out = stitchpadimg(useg)
@@ -311,6 +314,7 @@ def reducenoise(Rs,imsd,varmap,gainmap,R,pixelsize,NA,Lambda,alpha,iterationN,Ty
     fsz = Rs+2  
     assert imsd.ndim==3, "imsd should be a 3D matrix"
     N = imsd.shape[0]
+    ## change this to the a random pixel
     outL = np.zeros(imsd.shape)
     rcfilter = genfilter(fsz,pixelsize,NA,Lambda,Type,w,h)
     if gainmap.ndim == 2:
