@@ -11,11 +11,11 @@
 
 @author: Sheng Liu and David A. Miller, August 2017
 
+@author: modified by Ziqiang Wei, Jan 2018
+
 """
 
 import numpy as np
-import h5py
-import matplotlib.pyplot as plt
 import scipy.io as sio
 import scipy.signal as sig
 import scipy.optimize as optimize
@@ -189,26 +189,26 @@ def cropimage(ims,R,startx,starty):
     roi = ims[starty:starty+R,startx:startx+R]
     return roi
 
-def gennoisemap(R,fpath):
-    
-    #fmat = h5py.loadmat(fpath)
-    #varname = list(fmat.keys())
-    fmat = sio.loadmat(fpath)
-    tmpvar = fmat['ccdvar']
-    tmpgain = fmat['gain']
-    startx = 92
-    starty = 44    
-    varsub = cropimage(tmpvar,R,startx,starty)
-    gainsub = cropimage(tmpgain,R,startx,starty)
-    return varsub,gainsub
+#def gennoisemap(R,fpath):
+#    
+#    #fmat = h5py.loadmat(fpath)
+#    #varname = list(fmat.keys())
+#    fmat = sio.loadmat(fpath)
+#    tmpvar = fmat['ccdvar']
+#    tmpgain = fmat['gain']
+#    startx = 92
+#    starty = 44    
+#    varsub = cropimage(tmpvar,R,startx,starty)
+#    gainsub = cropimage(tmpgain,R,startx,starty)
+#    return varsub,gainsub
        
-def addnoise(varmap,gainmap,normimg,I,bg,offset):
-    R = normimg.shape[0]
-    idealimg = np.abs(normimg)*I+bg
-    poissonimg = np.random.poisson(idealimg)
-    scmosimg = poissonimg*gainmap + np.sqrt(varmap)*np.random.randn(R,R)
-    scmosimg += offset
-    return scmosimg,poissonimg 
+#def addnoise(varmap,gainmap,normimg,I,bg,offset):
+#    R = normimg.shape[0]
+#    idealimg = np.abs(normimg)*I+bg
+#    poissonimg = np.random.poisson(idealimg)
+#    scmosimg = poissonimg*gainmap + np.sqrt(varmap)*np.random.randn(R,R)
+#    scmosimg += offset
+#    return scmosimg,poissonimg 
     
 def gendatastack(normimg,varmap,gainmap,I,bg,offset,N):
     R = normimg.shape[0]
@@ -290,7 +290,8 @@ def segoptim(u0seg,varseg,gainseg,otfmask,alpha,iterationN,ind):
     return outix
     
 
-def optimf(u0,varseg,gainseg,otfmask,Rs,R,alpha,iterationN):
+def optimf(u0,varseg,gainseg,otfmask,Rs, alpha,iterationN):
+    R = np.array(u0.shape).max()
     Ns = R//Rs
     u0seg = segpadimg(u0,Rs)
     useg = np.zeros(u0seg.shape)#
@@ -310,26 +311,15 @@ def optimf(u0,varseg,gainseg,otfmask,Rs,R,alpha,iterationN):
     out[out<0] = 1e-6     
     return out
 
-def reducenoise(Rs,imsd,varmap,gainmap,R,pixelsize,NA,Lambda,alpha,iterationN,Type='OTFweighted',w=1,h=0.7):
+def reducenoise(Rs,imsd,varmap,gainmap,pixelsize,NA,Lambda,alpha,iterationN,Type='OTFweighted',w=1,h=0.7):
+    imsd[imsd<0] = 1e-6
     fsz = Rs+2  
-    assert imsd.ndim==3, "imsd should be a 3D matrix"
-    N = imsd.shape[0]
-    ## change this to the a random pixel
-    outL = np.zeros(imsd.shape)
+    # get OTF filter
     rcfilter = genfilter(fsz,pixelsize,NA,Lambda,Type,w,h)
-    if gainmap.ndim == 2:
-        varseg = segpadimg(varmap,Rs)
-        gainseg = segpadimg(gainmap,Rs)
-        for ii in range(N):
-            out = optimf(imsd[ii],varseg,gainseg,rcfilter,Rs,R,alpha,iterationN)
-            outL[ii] = out
-    if gainmap.ndim == 3:
-        for ii in range(N):            
-            varseg = segpadimg(varmap[ii],Rs)
-            gainseg = segpadimg(gainmap[ii],Rs)
-            out = optimf(imsd[ii],varseg,gainseg,rcfilter,Rs,R,alpha,iterationN)
-            outL[ii] = out
-    return outL
+    # get segpadimag
+    varseg = segpadimg(varmap,Rs)
+    gainseg = segpadimg(gainmap,Rs)
+    return optimf(imsd,varseg,gainseg,rcfilter,Rs,alpha,iterationN)
     
 
     
