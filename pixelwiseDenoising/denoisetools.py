@@ -7,7 +7,7 @@
                                   Purdue University
                                   West Lafayette, Indiana
                                   USA
- 
+
 
 @author: Sheng Liu and David A. Miller, August 2017
 
@@ -29,11 +29,11 @@ def segpadimg(img,R1):
     Ns = R//R1
     ims0 = img[:,0:R1+1]
     for ii in np.arange(1,Ns-1,1):
-        tmp = img[:,ii*R1-1:(ii+1)*R1+1] 
+        tmp = img[:,ii*R1-1:(ii+1)*R1+1]
         ims0 = np.concatenate((ims0,tmp),axis=1)
     tmp = img[:,(Ns-1)*R1-1:]
     ims0 = np.concatenate((ims0,tmp),axis=1)
-    
+
     ims1 = ims0[0:R1+1,:]
     for ii in np.arange(1,Ns-1,1):
         tmp = ims0[ii*R1-1:(ii+1)*R1+1,:]
@@ -66,7 +66,7 @@ def padedge(ims,p,axis):
     ims2 = np.vstack((edge1,ims1,edge2))
     imspd = ims2.swapaxes(axis,0)
     return imspd
-    
+
 def interpad(ims, p):
     ims1 = padedge(ims,p,axis = 0)
     imspd = padedge(ims1,p,axis = 1)
@@ -74,7 +74,7 @@ def interpad(ims, p):
 
 def stitchpadimg(imgseg):
     N = imgseg.shape[0]
-    R1 = int(np.sqrt(N)) 
+    R1 = int(np.sqrt(N))
     a = []
     b = []
     for ii in range(N):
@@ -86,7 +86,7 @@ def stitchpadimg(imgseg):
     return imgstitch
 
 def binimage(imgin, ibin):
-    sz = imgin.shape[0]   
+    sz = imgin.shape[0]
     R = sz//ibin
     imgsegs = segimg(imgin, ibin)
     imgvec = imgsegs.sum(axis=1).sum(axis=1)
@@ -114,7 +114,7 @@ def genpsfparam(R,pixelsize,NA,Lambda):
     OTFn = OTF/OTF.max()
     return PSFn,pupil,OTFn
     #return PSFn
-    
+
 def SRhist(xsz,ysz,x,y):
     N = x.shape[0]
     frm = 10000
@@ -136,53 +136,53 @@ def SRhist(xsz,ysz,x,y):
         idx = np.vstack([currx,curry])
         idx = idx.transpose()
         idx = idx.tolist()
-        
+
         histim[currx,curry] = 1
         x0,y0 = histim.nonzero() # find non zero indices
-        idx0 = np.argwhere(histim) # find non zero coordinates pair 
+        idx0 = np.argwhere(histim) # find non zero coordinates pair
         N0 = idx0.shape[0]
         idx0 = idx0.tolist()
         for nn in range(N0):
             histim[x0[nn],y0[nn]] += idx.count(idx0[nn])
-            
-    return histim    
-        
+
+    return histim
+
 def genidealimage(R,pixelsize,zoom,NA,Lambda,fpath):
     sz = R*zoom
     cc = sz//2
     Ri = zoom*5//2
-    
+
     #fmat = h5py.loadmat(fpath)
     #varname = list(fmat.keys())
-    
+
     fmat = sio.loadmat(fpath)
     cor = fmat['random_wlc']
     xcor = cor[:,0,:]
     ycor = cor[:,1,:]
     xcor = xcor.ravel()
     ycor = ycor.ravel()
-    
+
     xco = np.round(xcor - xcor.min())
     yco = np.round(ycor - ycor.min())
     xsz = xco.max()
-    ysz = yco.max()    
+    ysz = yco.max()
     scale = np.max([xsz,ysz])/sz
     xs = xco/scale
     ys = yco/scale
-    histim = SRhist(sz,sz,xs,ys)  
+    histim = SRhist(sz,sz,xs,ys)
     histim[histim>1] = 1
     res = genpsfparam(sz,pixelsize/zoom,NA,Lambda)
     PSFn = res[0]
     kernel = PSFn[cc-Ri:cc+Ri,cc-Ri:cc+Ri]
     normimgL = sig.fftconvolve(histim,kernel,mode='same')
     normimgL = np.abs(normimgL.transpose())
-    
+
     if zoom>1:
         imgbin = binimage(normimgL,zoom)
         normimg = imgbin/zoom
     else:
         normimg = normimgL
-        
+
     return normimg,kernel
 
 def cropimage(ims,R,startx,starty):
@@ -190,26 +190,26 @@ def cropimage(ims,R,startx,starty):
     return roi
 
 #def gennoisemap(R,fpath):
-#    
+#
 #    #fmat = h5py.loadmat(fpath)
 #    #varname = list(fmat.keys())
 #    fmat = sio.loadmat(fpath)
 #    tmpvar = fmat['ccdvar']
 #    tmpgain = fmat['gain']
 #    startx = 92
-#    starty = 44    
+#    starty = 44
 #    varsub = cropimage(tmpvar,R,startx,starty)
 #    gainsub = cropimage(tmpgain,R,startx,starty)
 #    return varsub,gainsub
-       
+
 #def addnoise(varmap,gainmap,normimg,I,bg,offset):
 #    R = normimg.shape[0]
 #    idealimg = np.abs(normimg)*I+bg
 #    poissonimg = np.random.poisson(idealimg)
 #    scmosimg = poissonimg*gainmap + np.sqrt(varmap)*np.random.randn(R,R)
 #    scmosimg += offset
-#    return scmosimg,poissonimg 
-    
+#    return scmosimg,poissonimg
+
 def gendatastack(normimg,varmap,gainmap,I,bg,offset,N):
     R = normimg.shape[0]
     ims = np.zeros([N,R,R])
@@ -225,7 +225,7 @@ def gendatastack(normimg,varmap,gainmap,I,bg,offset,N):
     return ims,imsd,imsp,imso
 
 class filters(object):
- 
+
     def pureN(self):
         beta = 0.2
         T = (1-beta)*self.Lambda/4/self.NA
@@ -271,24 +271,28 @@ def calcost(u,data,var,gain,otfmask,alpha):
 
 def calnoisecontri(u,otfmask):
     normf = u.shape[0]
-    ims1 = ft.fftshift(ft.fft2(u))    
-    #ims1 = sig.fftpack.fftshift(sig.fftpack.fft2(u))    
+    ims1 = ft.fftshift(ft.fft2(u))
+    #ims1 = sig.fftpack.fftshift(sig.fftpack.fft2(u))
     ims1 = np.abs(ims1)/normf
     ims2 = (ims1*otfmask)**2
-    noisepart = ims2.sum()    
+    noisepart = ims2.sum()
     return noisepart
 
 def segoptim(u0seg,varseg,gainseg,otfmask,alpha,iterationN,ind):
     u0i = u0seg[ind]
     vari = varseg[ind]
     gaini = gainseg[ind]
-    #sig.fftpack = pft.interfaces.scipy_fftpack   
-    #pft.interfaces.cache.enable() 
+    #sig.fftpack = pft.interfaces.scipy_fftpack
+    #pft.interfaces.cache.enable()
     opts = {'disp':False,'maxiter':iterationN}
-    outi = optimize.minimize(calcost,u0i,args=(u0i,vari,gaini,otfmask,alpha),method='L-BFGS-B',options=opts)
+    lbounds = np.zeros(u0i.shape)
+    lbounds = np.asarray(lbounds).ravel()
+    ubounds = np.inf*np.ones(lbounds.shape)
+    bounds = list(zip(lbounds.tolist(), ubounds.tolist()))
+    outi = optimize.minimize(calcost,u0i,args=(u0i,vari,gaini,otfmask,alpha),bounds=bounds,method='L-BFGS-B',options=opts)
     outix = outi.x.reshape(u0i.shape)
     return outix
-    
+
 
 def optimf(u0,varseg,gainseg,otfmask,Rs, alpha,iterationN):
     R = np.array(u0.shape).max()
@@ -308,21 +312,15 @@ def optimf(u0,varseg,gainseg,otfmask,Rs, alpha,iterationN):
     elapsed = time.time()-t
     print('Elapsed time for noise reduction:', elapsed)
     out = stitchpadimg(useg)
-    out[out<0] = 1e-6     
+    out[out<0] = 1e-6
     return out
 
 def reducenoise(Rs,imsd,varmap,gainmap,pixelsize,NA,Lambda,alpha,iterationN,Type='OTFweighted',w=1,h=0.7):
     imsd[imsd<0] = 1e-6
-    fsz = Rs+2  
+    fsz = Rs+2
     # get OTF filter
     rcfilter = genfilter(fsz,pixelsize,NA,Lambda,Type,w,h)
     # get segpadimag
     varseg = segpadimg(varmap,Rs)
     gainseg = segpadimg(gainmap,Rs)
     return optimf(imsd,varseg,gainseg,rcfilter,Rs,alpha,iterationN)
-    
-
-    
-    
-    
-    
