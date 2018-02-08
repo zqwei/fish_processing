@@ -264,6 +264,7 @@ def calcost(u,data,var,gain,otfmask,alpha):
     u = u.reshape(data.shape)
     noisepart = calnoisecontri(u,otfmask)
     gamma = var/gain/gain
+    gamma[gain == 1e-6] = 1e-6
     LL = u-(data+gamma)*np.log(u+gamma)
     likelihood = LL.sum()
     fcost = likelihood+alpha*noisepart
