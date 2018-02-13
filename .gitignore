@@ -4,6 +4,8 @@ testing_file
 *.npy
 *.png
 *.tif
+*.mat
+*.nii.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
