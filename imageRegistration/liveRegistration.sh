@@ -28,8 +28,8 @@ antsRegistration --dimensionality 3 --float 1 --verbose $verb \
                  --convergence $cnv \
                  --shrink-factors $down \
                  --smoothing-sigmas $smth
-                 # --transform SyN[0.05,6,0.5] \
-                 # --metric CC[$f,$m,1,2] \
-                 # --convergence $cnvSyN \
-                 # --shrink-factors $downSyN \
-                 # --smoothing-sigmas $smthSyN
+                 --transform SyN[0.05,6,0.5] \
+                 --metric CC[$f,$m,1,2] \
+                 --convergence $cnvSyN \
+                 --shrink-factors $downSyN \
+                 --smoothing-sigmas $smthSyN
