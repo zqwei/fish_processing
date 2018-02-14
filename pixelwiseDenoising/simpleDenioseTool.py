@@ -69,5 +69,12 @@ def simpleDN(img, folder_name='gainMat20180208', pixel_x=None, pixel_y=None, off
     imgD[imgD <= 0] = 1e-6
     return imgD
 
+def simpleDNStack(img, folder_name='gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
+    imgD = img
+    for nPlane in range(len(imgD)):
+        img_ = img[nPlane]
+        imgD[nPlane] = simpleDN(img_, folder_name=folder_name, pixel_x=pixel_x, pixel_y=pixel_y, offset=offset, gain=gain)
+    return imgD
+
 if __name__ == '__main__':
     compute_gain_matrix(folder_name='gainMat20180208')
