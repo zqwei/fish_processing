@@ -263,9 +263,9 @@ def genfilter(R,pixelsize,NA,Lambda,Type='OTFweighted',w=1,h=0.7):
 def calcost(u,data,var,gain,otfmask,alpha):
     u = u.reshape(data.shape)
     noisepart = calnoisecontri(u,otfmask)
-    gamma = var/gain/gain
+    gamma = var/(gain+1e-12)/(gain+1e-12) # avoid division errors
     gamma[gain == 1e-6] = 1e-6
-    LL = u-(data+gamma)*np.log(u+gamma)
+    LL = u-(data+gamma)*np.log(u+gamma+1e-12)
     likelihood = LL.sum()
     fcost = likelihood+alpha*noisepart
     return fcost
@@ -281,17 +281,19 @@ def calnoisecontri(u,otfmask):
 
 def segoptim(u0seg,varseg,gainseg,otfmask,alpha,iterationN,ind):
     u0i = u0seg[ind]
+    outix = u0i
     vari = varseg[ind]
-    gaini = gainseg[ind]
-    #sig.fftpack = pft.interfaces.scipy_fftpack
-    #pft.interfaces.cache.enable()
-    opts = {'disp':False,'maxiter':iterationN}
-    lbounds = np.zeros(u0i.shape)
-    lbounds = np.asarray(lbounds).ravel()
-    ubounds = np.inf*np.ones(lbounds.shape)
-    bounds = list(zip(lbounds.tolist(), ubounds.tolist()))
-    outi = optimize.minimize(calcost,u0i,args=(u0i,vari,gaini,otfmask,alpha),bounds=bounds,method='L-BFGS-B',options=opts)
-    outix = outi.x.reshape(u0i.shape)
+    if np.count_nonzero(vari)>0:
+        gaini = gainseg[ind]
+        #sig.fftpack = pft.interfaces.scipy_fftpack
+        #pft.interfaces.cache.enable()
+        opts = {'disp':False,'maxiter':iterationN}
+        lbounds = np.zeros(u0i.shape)
+        lbounds = np.asarray(lbounds).ravel()
+        ubounds = np.inf*np.ones(lbounds.shape)
+        bounds = list(zip(lbounds.tolist(), ubounds.tolist()))
+        outi = optimize.minimize(calcost,u0i,args=(u0i,vari,gaini,otfmask,alpha),bounds=bounds,method='L-BFGS-B',options=opts)
+        outix = outi.x.reshape(u0i.shape)
     return outix
 
 
@@ -317,11 +319,23 @@ def optimf(u0,varseg,gainseg,otfmask,Rs, alpha,iterationN):
     return out
 
 def reducenoise(Rs,imsd,varmap,gainmap,pixelsize,NA,Lambda,alpha,iterationN,Type='OTFweighted',w=1,h=0.7):
-    imsd[imsd<0] = 1e-6
+    # deal with rectangluar image (code is run on squared image)
+    nx, ny = imsd.shape
+    nsize = max(nx, ny)
+    imsd_ = np.zeros((nsize, nsize))
+    imsd_[:nx, :ny] = imsd
+    imsd_[imsd_<=0] = 1e-6
+    gainmap_ = np.zeros((nsize, nsize))
+    gainmap_[:nx, :ny] = gainmap
+    varmap_ = np.zeros((nsize, nsize))
+    varmap_[:nx, :ny] = varmap
+
     fsz = Rs+2
     # get OTF filter
     rcfilter = genfilter(fsz,pixelsize,NA,Lambda,Type,w,h)
     # get segpadimag
-    varseg = segpadimg(varmap,Rs)
-    gainseg = segpadimg(gainmap,Rs)
-    return optimf(imsd,varseg,gainseg,rcfilter,Rs,alpha,iterationN)
+    varseg = segpadimg(varmap_,Rs)
+    gainseg = segpadimg(gainmap_,Rs)
+
+    out = optimf(imsd_,varseg,gainseg,rcfilter,Rs,alpha,iterationN)
+    return out[:nx, :ny]
