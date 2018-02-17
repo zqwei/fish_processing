@@ -47,7 +47,7 @@ def compute_gain_matrix(folder_name):
     np.save(folder_name +'/var_mat.npy', var)
     np.save(folder_name +'/gain_mat.npy', gain)
 
-def simpleDN(img, folder_name='gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
+def simpleDN(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
     # crop gain and offset matrix to the img size
     if pixel_x is None:
         pixel_x = (0, img.shape[0])
@@ -69,12 +69,12 @@ def simpleDN(img, folder_name='gainMat20180208', pixel_x=None, pixel_y=None, off
     imgD[imgD <= 0] = 1e-6
     return imgD
 
-def simpleDNStack(img, folder_name='gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
-    imgD = img
+def simpleDNStack(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
+    imgD = img.copy()
     for nPlane in range(len(imgD)):
         img_ = img[nPlane]
         imgD[nPlane] = simpleDN(img_, folder_name=folder_name, pixel_x=pixel_x, pixel_y=pixel_y, offset=offset, gain=gain)
     return imgD
 
 if __name__ == '__main__':
-    compute_gain_matrix(folder_name='gainMat20180208')
+    compute_gain_matrix(folder_name='../pixelwiseDenoising/gainMat20180208')
