@@ -1,5 +1,4 @@
 # Implement spatial filter for each pixel
-
 import numpy as np
 import caiman as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -27,7 +26,7 @@ def noise_estimator(Y,range_ff=[0.25,0.5],method='logmexp'):
             'logmexp': lambda Pxx_ind: np.sqrt(np.exp(np.mean(np.log(np.divide(Pxx_ind, 2)))))
         }[method](Pxx_ind)
         sns.append(sn)
-    
+
     sns = np.asarray(sns)
     if len(dims)>2:
         sns = sns.reshape(dims[:2],order='F')
@@ -55,7 +54,7 @@ def spatial_filter_image(Y_new, gHalf=[2,2], sn=None):
     if sn is None:
         #sn, _ = cm.source_extraction.cnmf.pre_processing.get_noise_fft(Y_new - mean_,noise_method='logmexp')
         sn = noise_estimator(Y_new - mean_, method='logmexp')
-        
+
         if 0:
             plt.title('Noise level per pixel')
             plt.imshow(sn)
@@ -76,8 +75,8 @@ def spatial_filter_image(Y_new, gHalf=[2,2], sn=None):
 
     k_hats=[]
     for pixel in np.arange(n_pixels):
-        if pixel % 1e3==0:
-            print('first k pixels %d'%pixel)
+        # if pixel % 1e3==0:
+        #     print('first k pixels %d'%pixel)
         ij = np.unravel_index(pixel,d[:2])
         for c, i in enumerate(ij):
             center[pixel, c] = i

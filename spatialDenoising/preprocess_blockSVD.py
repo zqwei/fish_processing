@@ -1,16 +1,14 @@
 import numpy as np
 import scipy as sp
 from scipy.stats import norm
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 from sklearn.utils.extmath import randomized_svd
 from sklearn.decomposition.dict_learning import dict_learning
 import matplotlib.pyplot as plt
 
-import trefide as tfd
-import spatial_filtering as sp_filters
-import tools as tools
+from . import trefide as tfd
+from . import spatial_filtering as sp_filters
+from . import tools as tools
 
 
 from sklearn import preprocessing
@@ -63,7 +61,7 @@ def get_noise_fft(Y, noise_range = [0.25,0.5],
     Y = np.array(Y).astype('float64')
 
     if T > max_num_samples_fft:
-        Y=np.concatenate((Y[...,1:np.int(old_div(max_num_samples_fft,3))+1],        
+        Y=np.concatenate((Y[...,1:np.int(old_div(max_num_samples_fft,3))+1],
                          Y[...,np.int(old_div(T,2)-max_num_samples_fft/3/2):np.int(old_div(T,2)+max_num_samples_fft/3/2)],
                          Y[...,-np.int(old_div(max_num_samples_fft,3)):]),axis=-1)
         T = np.shape(Y)[-1]
@@ -262,7 +260,7 @@ def svd_patch(M, k=1, maxlag=5, tsub=1, ds=1,noise_norm=False, iterate=False,
         Yd = combine_blocks(dimsM, Yds, dimsMc)
         ranks = np.logical_not(np.isnan(vtids[:,:2,:])).any(axis=1).sum(axis=1).astype('int')
         # Plot ranks Box
-        plot_en = True #debug
+        # plot_en = True #debug
         if plot_en:
             Cn = cn_ranks_plot(dimsMc, ranks, dimsM[:2])
         print('M rank {}'.format(sum(ranks)))
@@ -283,7 +281,7 @@ def svd_patch(M, k=1, maxlag=5, tsub=1, ds=1,noise_norm=False, iterate=False,
         else:
             print('M rank {}'.format(len(ranks)))
             rlen = len(ranks)
-    return Yd, rlen
+    return Yd, rlen, ranks
 
 
 def split_image_into_blocks(image, number_of_blocks=16):
@@ -1430,12 +1428,12 @@ def cn_ranks_plot(dim_block, ranks, dims):
     if not col_extra:
         col_array = np.append(col_array,dims[0])
 
-    x, y = np.meshgrid(row_array[:-1], col_array[:-1])
+    x, y = np.meshgrid(row_array[:-2], col_array[:-2])
     ax3.set_yticks(col_array[:-1])
     ax3.set_xticks(row_array[:-1])
 
     for ii , (row_val, col_val) in enumerate(zip(x.flatten(), y.flatten())):
-        c = str(int(Cplot3[int(col_val), int(row_val)]))
+        c = str(int(Cplot3[int(col_val),int(row_val)]))
         ax3.text(row_val + rows[ii]/2, col_val+cols[ii]/2, c, va='center', ha='center')
     plt.tight_layout()
     plt.show()
@@ -1705,7 +1703,7 @@ def denoisers_off_grid(W,k,maxlag=10,tsub=1,noise_norm=False,
     #    dpatch.append(Yd)
 
     Yd ,_ = svd_patch(W,k=k,maxlag=maxlag,confidence=confidence,
-            greedy=greedy,fudge_factor=fudge_factor, 
+            greedy=greedy,fudge_factor=fudge_factor,
             mean_th_factor=mean_th_factor,U_update=U_update,
             min_rank=min_rank)
     ##
@@ -1859,6 +1857,3 @@ def extract_off(W,r_offset,c_offset,row_cut,col_cut):
     W_cs = [y for x in W_c_off for y in x]
     W_rcs = [y for x in W_rc_off for y in x]
     return W_rs,W_cs,W_rcs
-
-
-
