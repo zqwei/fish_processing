@@ -36,12 +36,10 @@ plt.show()
 
 ## 3. Single-cell level denoising
 
-## 4. From image to single cells or super voxels
-
-### 4.1 Cell detections
-#### 4.1.1 Template based (e.g. elavl3:GCaMP6f)
-#### 4.1.2 CNN based (e.g. voltron imaging)
-#### 4.1.3 Demixing to super voxels
+## 4. From image to single cells or super voxels (Cell detections)
+### 4.1 Template based (e.g. elavl3:GCaMP6f)
+### 4.2 CNN based (e.g. voltron imaging)
+### 4.3 Demixing to super voxels
 
 ## 5. Brain-wide analyses
 
