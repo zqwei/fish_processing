@@ -36,25 +36,25 @@ plt.show()
 
 ## 3. Single-cell level denoising
 
-## 4. From image to single cells or super voxels
-
-### 4.1 Cell detections
-#### 4.1.1 Template based (e.g. elavl3:GCaMP6f)
-#### 4.1.2 CNN based (e.g. voltron imaging)
-#### 4.1.3 Demixing to super voxels
+## 4. From image to single cells or super voxels (Cell detections)
+### 4.1 Template based (e.g. elavl3:GCaMP6f)
+### 4.2 CNN based (e.g. voltron imaging)
+### 4.3 Demixing to super voxels
 
 ## 5. Brain-wide analyses
 
-### 5.1 Spatial components
-#### 5.1.1 Single fish
-#### 5.1.2 Single fish with brain atlas
-#### 5.1.3 Average across multiple fishes
+### 5.1 Cell selectivity
 
-### 5.2 Temporal components and oscillations
+### 5.2 Spatial components
+#### 5.2.1 Single fish
+#### 5.2.2 Single fish with brain atlas
+#### 5.2.3 Average across multiple fishes
 
-### 5.3 Spatiotemporal analyses and dynamical systems
+### 5.3 Temporal components and oscillations
 
-### 5.4 Brain states and change detections
+### 5.4 Spatiotemporal analyses and dynamical systems
+
+### 5.5 Brain states and change detections
 
 ## 6. Behavioral data
 
