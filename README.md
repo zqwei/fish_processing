@@ -46,6 +46,9 @@ plt.show()
 ## 5. Brain-wide analyses
 
 ### 5.1 Spatial components
+#### 5.1.1 Single fish
+#### 5.1.2 Single fish with brain atlas
+#### 5.1.3 Average across multiple fishes
 
 ### 5.2 Temporal components and oscillations
 
