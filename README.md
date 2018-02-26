@@ -36,17 +36,24 @@ plt.show()
 
 ## 3. Single-cell level denoising
 
-## 4. Brain-wide analyses
+## 4. From image to single cells or super voxels
 
-### 4.1 Spatial components
+### 4.1 Cell detections
+#### 4.1.1 Template based (e.g. elavl3:GCaMP6f)
+#### 4.1.2 CNN based (e.g. voltron imaging)
+#### 4.1.3 Demixing to super voxels
 
-### 4.2 Temporal components and oscillations
+## 5. Brain-wide analyses
 
-### 4.3 Spatiotemporal analyses and dynamical systems
+### 5.1 Spatial components
 
-### 4.4 Brain states and change detections
+### 5.2 Temporal components and oscillations
 
-## 5. Behavioral data
+### 5.3 Spatiotemporal analyses and dynamical systems
+
+### 5.4 Brain states and change detections
+
+## 6. Behavioral data
 
 ## Extra 1. Single-cell RNA seq
 https://github.com/zqwei/single_cell_zebrafish
