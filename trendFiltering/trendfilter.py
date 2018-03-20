@@ -34,9 +34,9 @@ class partition(object):
         for i in range(self.size):
             s = random.choice([self.part['pos'],self.part['neg'],self.part['act']])
             s.append(i)
-            
+
 class TF(object):
-    default_option = {'max_it':1000, 'opt_tol':1.0e-6}
+    default_option = {'max_it':10000, 'opt_tol':1.0e-6}
     def __init__(self,y,lam,order=1,mode = -1):
         self.y = y
         self.lam = lam
@@ -49,7 +49,7 @@ class TF(object):
         self.x = np.zeros((self.size,1))
         self.z = np.zeros((self.size-order,1))
         self.mode = mode
-        
+
         self.info = {'status': 'Initialized'}
         self.info['iter'] = 0
         self.info['time'] = None
@@ -220,7 +220,7 @@ class TFsafe(TF):
             violation.append({'vfrom': P, 'vto': A, 'what': max([i for i in sP if Dx[i] < 0])})
         except ValueError:
             violation.append({'vfrom': P, 'vto': A, 'what': -1})
-            
+
         try:
             violation.append({'vfrom': N, 'vto': A, 'what': max([i for i in sN if Dx[i] > 0])})
         except ValueError:
@@ -243,7 +243,7 @@ class TFsafe(TF):
 
     def pdas(self):
         'Apply PDAS to solve the problem'
-        print(self.title)
+        if not self.silence: print(self.title)
         start = time()
         for i in range(TF.default_option['max_it']):
             self.new_solution()
@@ -256,10 +256,10 @@ class TFsafe(TF):
                 self.info['time'] = time() - start
                 return
 
-            if vn < self.vc: 
+            if vn < self.vc:
                 self.t = 0
                 self.vc = vn
-            else: 
+            else:
                 self.t += 1
 
             if self.t < self.maxv:
@@ -286,9 +286,9 @@ class TFsafe(TF):
                 self.info['time'] = time() - start
                 return
 
-            if vn < self.vc: 
+            if vn < self.vc:
                 self.t = 0
-            else: 
+            else:
                 self.t += 1
 
             self.vc = R.mean
@@ -316,7 +316,7 @@ class rolling(object):
         else:
             self.mean -= self.array[self.cur]/self.size
             self.array[self.cur] = item
-            self.mean += item/self.size            
+            self.mean += item/self.size
             self.cur = (self.cur + 1)%self.size
 
 class TFsafeG(TFsafe):
@@ -357,7 +357,7 @@ class TFsafeG(TFsafe):
                 self.t = 0
                 self.vc = vn
                 self.bestP = deepcopy(self.P)
-            else: 
+            else:
                 # Violation up by once
                 self.t += 1
 
@@ -401,7 +401,7 @@ class TFsafeG(TFsafe):
                 self.t = 0
                 self.bestkkt = vn
                 self.bestP = deepcopy(self.P)
-            else: 
+            else:
                 # Violation up by once
                 self.t += 1
 
