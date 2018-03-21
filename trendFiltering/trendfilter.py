@@ -270,7 +270,7 @@ class TFsafe(TF):
 
     def pdas2(self):
         'Another safeguard strategy'
-        print(self.title)
+        if not self.silence: print(self.title)
         R = rolling()
         start = time()
         for i in range(TF.default_option['max_it']):
@@ -339,7 +339,7 @@ class TFsafeG(TFsafe):
 
     def pdas(self):
         'Apply PDAS to solve the problem'
-        print(self.title)
+        if not self.silence: print(self.title)
         start = time()
         for i in range(TF.default_option['max_it']):
             self.new_solution()
@@ -383,7 +383,7 @@ class TFsafeG(TFsafe):
 
     def pdas2(self):
         'Apply PDAS to solve the problem'
-        print(self.title)
+        if not self.silence: print(self.title)
         start = time()
         for i in range(TF.default_option['max_it']):
             self.new_solution()
