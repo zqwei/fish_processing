@@ -131,7 +131,7 @@ class TF(object):
 
     def pdas(self):
         'Apply PDAS to solve the problem'
-        print(self.title)
+        if not self.silence: print(self.title)
         start = time()
         for i in range(TF.default_option['max_it']):
             self.new_solution()
