@@ -1,5 +1,7 @@
 testing_file
 
+*.pkl
+*.xlsx
 *.npz
 *.npy
 *.png
