@@ -1,4 +1,5 @@
 # Implement spatial filter for each pixel
+
 import numpy as np
 import caiman as cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -26,7 +27,6 @@ def noise_estimator(Y,range_ff=[0.25,0.5],method='logmexp'):
             'logmexp': lambda Pxx_ind: np.sqrt(np.exp(np.mean(np.log(np.divide(Pxx_ind, 2)))))
         }[method](Pxx_ind)
         sns.append(sn)
-
     sns = np.asarray(sns)
     if len(dims)>2:
         sns = sns.reshape(dims[:2],order='F')
@@ -52,9 +52,7 @@ def spatial_filter_image(Y_new, gHalf=[2,2], sn=None):
     """
     mean_ = Y_new.mean(axis=2,keepdims=True)
     if sn is None:
-        #sn, _ = cm.source_extraction.cnmf.pre_processing.get_noise_fft(Y_new - mean_,noise_method='logmexp')
         sn = noise_estimator(Y_new - mean_, method='logmexp')
-
         if 0:
             plt.title('Noise level per pixel')
             plt.imshow(sn)
@@ -75,8 +73,8 @@ def spatial_filter_image(Y_new, gHalf=[2,2], sn=None):
 
     k_hats=[]
     for pixel in np.arange(n_pixels):
-        # if pixel % 1e3==0:
-        #     print('first k pixels %d'%pixel)
+        if pixel % 1e3==0:
+            print('first k pixels %d'%pixel)
         ij = np.unravel_index(pixel,d[:2])
         for c, i in enumerate(ij):
             center[pixel, c] = i
@@ -85,19 +83,12 @@ def spatial_filter_image(Y_new, gHalf=[2,2], sn=None):
                 for c in range(len(ij))]
 
         Y_curr = np.array(Y_new[[slice(*a) for a in ijSig]].copy(),dtype=np.float32)
-        #sn_curr = None#
         sn_curr = np.array(sn[[slice(*a) for a in ijSig]].copy(),dtype=np.float32)
-        #print('shape is %d %d'%(sn_curr.shape))
         cc1 = ij[0]-ijSig[0][0]
         cc2 = ij[1]-ijSig[1][0]
-        #print('Index {} center {}x {}'.format(k,cc1,cc2))
         neuron_indx = int(np.ravel_multi_index((cc1,cc2),Y_curr.shape[:2],order='F'))
-        #Y_new2[[slice(*a) for a in ijSig]] , k_hat = spatial_filter_block(Y_curr, sn=sn_curr,
-        #        maps=maps, neuron_indx=neuron_indx)
         Y_out , k_hat = spatial_filter_block(Y_curr, sn=sn_curr,
                 maps=maps, neuron_indx=neuron_indx)
-        #Y_out = Y_curr.copy()
-        #k_hat=[]
         Y_new3[ij[0],ij[1],:] = Y_out[cc1,cc2,:]
         k_hats.append(k_hat)
 
@@ -117,29 +108,19 @@ def spatial_filter_block(data,sn=None,maps=None,neuron_indx=None):
         sn, _ = cm.source_extraction.cnmf.pre_processing.get_noise_fft(data_,noise_method='mean')
 
     sn = sn.reshape(np.prod(dims[:2]),order='F')
-    #D = np.diag(sn)/sn.max() # data_std
-    #D = np.diag(np.sqrt(sn))
     D = np.diag(sn**2)
     data_r = data_.reshape((np.prod(dims[:2]),dims[2]),order='F')
-    #data_r /= sn[:,np.newaxis]#.max()
-    Cy = covariance_matrix(data_r)#data_r.dot(data_r.T)/(data_r.shape[1]-1)
+    Cy = covariance_matrix(data_r)
 
-    Cy = Cy.copy() #+ np.diag([1e-16]*Cy.shape[1])
-    #print(Cy.max())
+    Cy = Cy.copy()
     try:
         if neuron_indx is None:
             hat_k = np.linalg.inv(Cy).dot(Cy-D)
         else:
             hat_k = np.linalg.inv(Cy).dot(Cy[neuron_indx,:]-D[neuron_indx,:])
     except np.linalg.linalg.LinAlgError as err:
-        #if 'Singular matrix' in err.message:
         print('Singular matrix(?) bye bye')
         return data , []
-        #else:
-        #    raise
-    #data_r *=sn[:,np.newaxis]#.max()
-    #print('k is %.4f'%hat_k.min())
-    #print(hat_k)
     if neuron_indx is None:
         y_ = hat_k.dot(data_r)
     else:
@@ -152,7 +133,7 @@ def spatial_filter_block(data,sn=None,maps=None,neuron_indx=None):
     Cn_yh = cm.local_correlations(y_hat)
 
     # Plot the Cn for original and denoised image
-    if 0:
+    if False:
         fig,ax = plt.subplots(1,3,figsize=(10,5))
         im0 = ax[0].imshow(Cn_y.T,vmin=maps[0],vmax=maps[1])
         if neuron_indx is None:

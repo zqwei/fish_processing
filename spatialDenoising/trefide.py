@@ -1,20 +1,19 @@
 import cvxpy as cp
 import numpy as np
 import scipy as sp
-import scipy.signal as sps
+from utils import butter_highpass
 
-
-# TODO: Relocate (utility unrelated to trend filtering)
-def detrend(signals, degree=2):
-    """ Substracts the order k trend from each input pixel """
-    _, len_signal = signals.shape
-    X = np.array([np.power(np.arange(len_signal), k)
-                  for k in range(degree + 1)]).T
-    Hat = X.dot(np.linalg.inv(X.T.dot(X))).dot(X.T)
-    return signals - signals.dot(Hat)
-
-
+import matplotlib.pyplot as plt
 """Noise Estimation"""
+
+
+def difference_operator(len_signal):
+    # Gen Diff matrix
+    diff_mat = (np.diag(2 * np.ones(len_signal), 0) +
+                np.diag(-1 * np.ones(len_signal - 1), 1) +
+                np.diag(-1 * np.ones(len_signal - 1), -1)
+                )[1:len_signal - 1]
+    return diff_mat
 
 
 def _fft_estimator(signal, freq_range=[0.25, 0.5], max_samples=3072):
@@ -197,13 +196,6 @@ def estimate_noise(signals,
 """Activity detection/Region Partitioning"""
 
 
-def butter_highpass_filter(signal, cutoff, fs, order=6):
-    """ Filter signal with butterworth highpass."""
-    normal_cutoff = cutoff / (0.5 * fs)
-    b, a = sps.butter(order, normal_cutoff, btype='high', analog=False)
-    return sps.filtfilt(b, a, signal)
-
-
 def _keep_min_consec(seq, min_consec=2):
     """Only keep positive elements which occur in sequences of at least min_sample
     consecutive positive elements."""
@@ -272,7 +264,8 @@ def detect_regions(signal,
                    thresh_min_pnr=5,
                    active_min_gap=400,
                    active_buffer=50,
-                   active_discount=0):
+                   active_discount=0,
+                   plot_en=False):
     """
     Partition input signal into regions dominated by spiking activity and 
     subthreshold activity. Active regions are detected by thresholding the 
@@ -375,14 +368,19 @@ def detect_regions(signal,
                               len_samples_boot=noise_len_samples_boot)[0]
 
     # High pass filter to upweight spikes / remove slow fluctuations
-    highpass = butter_highpass_filter(signal,
-                                      cutoff=filter_cutoff,
-                                      fs=filter_fs,
-                                      order=filter_order)
+    highpass = butter_highpass(signal,
+                               cutoff=filter_cutoff,
+                               fs=filter_fs,
+                               order=filter_order)
 
-    # Detect spike_loces of threshold with at least min_sample consec elements
+      # Detect spike_loces of threshold with at least min_sample consec elements
     spike_loc = _keep_min_consec(np.abs(highpass / stdv) > thresh_min_pnr,
                                  min_consec=thresh_min_consec)
+
+    if plot_en:
+        plt.plot(spike_loc,'--r')
+        plt.plot(signal/signal.max())
+        plt.show()
 
     # todo: If there are too many spike_loces (min_pnr set too low),
     # fallback to reasonable default (single region?)
@@ -391,6 +389,11 @@ def detect_regions(signal,
     region_indices, is_active = _connect_regions(spike_loc,
                                                  active_min_gap=active_min_gap,
                                                  active_buffer=active_buffer)
+    if plot_en:
+        for reg_ in region_indices:
+            plt.plot(highpass)
+            plt.plot(reg_.flatten(),highpass[reg_.flatten(),],'--r')
+            plt.show()
 
     # Compute fudge factor for each region
     fudge_factors = np.ones(len(is_active)) - active_discount * is_active
@@ -420,7 +423,10 @@ def constrained_l1tf(signal,
                      region_active_discount=0,
                      region_active_buffer=50,
                      region_active_min_gap=400,
-                     solver='SCS'):
+                     solver='SCS',
+                     lagrange_scaled =False,
+                     verbose=False,
+                     plot_en=False):
     """
     Denoise a single input signal y by applying the L1-Trend Filtering objective
 
@@ -535,7 +541,7 @@ def constrained_l1tf(signal,
             formulations of the trend filtering optimization
     """
 
-    # Auto detect noise level
+    print('Auto detect noise level') if verbose else 0
     if stdv is None:
         stdv = estimate_noise([signal],
                               estimator=noise_estimator,
@@ -545,6 +551,8 @@ def constrained_l1tf(signal,
                               num_samples_boot=noise_num_samples_boot,
                               len_samples_boot=noise_len_samples_boot)[0]
 
+    print('Noise range [%d,%d]'%(stdv.max(),stdv.min())) if verbose else 0
+
     # Gen Diff matrix
     len_signal = len(signal)
     if diff_mat is None:
@@ -553,7 +561,7 @@ def constrained_l1tf(signal,
                     np.diag(-1 * np.ones(len_signal - 1), -1)
                     )[1:len_signal - 1]
 
-    # Auto-detect relevant regions
+    print('Auto-detect relevant regions') if verbose else 0
     if region_indices is None:
         region_indices, fudge_factors = detect_regions(signal,
                                                        stdv=stdv,
@@ -568,18 +576,22 @@ def constrained_l1tf(signal,
     elif fudge_factors is None:
         fudge_factors = np.ones(len(region_indices))
 
-    # Translate trend filtering optimization to CVX
+    print (fudge_factors) if verbose else 0
+    print('Translate trend filtering optimization to CVX') if verbose else 0
     filtered_signal = cp.Variable(len_signal)
-    objective = cp.Minimize(cp.norm(cp.matmul(diff_mat, filtered_signal), 1))
+    objective = cp.Minimize(cp.norm(diff_mat*filtered_signal, 1))
     constraints = [cp.norm(signal[idx] - filtered_signal[idx], 2)
                    <= fudge * stdv * np.sqrt(len(idx))
                    for idx, fudge in zip(region_indices, fudge_factors)]
-
     # Solve CVX
-    cp.Problem(objective, constraints).solve(solver=solver)  # 'ECOS' or 'SCS'
+    cp.Problem(objective, constraints).solve(solver=solver,
+                    max_iters=1000,verbose=False)  # 'ECOS' or 'SCS'
+    
     lambdas = [constraint.dual_value for constraint in constraints]
-
-    return filtered_signal.value, region_indices, lambdas
+    if lagrange_scaled: # scale by fudge factor for closed iterations:
+        lambdas = [fudge_factors[ii]/lambda_ if lambda_ !=0 else lambda_ for ii, 
+                   lambda_ in enumerate(lambdas)]
+    return np.asarray(filtered_signal.value).flatten(), region_indices, lambdas
 
 
 def denoise(signals,
