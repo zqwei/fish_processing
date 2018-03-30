@@ -17,7 +17,7 @@ def getCameraInfo(file):
         camera_info.update(dict(s.attributes.items()))
 
     itemlist = xmldoc.getElementsByTagName('action')
-        for s in itemlist:
-            camera_info.update(dict(s.attributes.items()))
+    for s in itemlist:
+        camera_info.update(dict(s.attributes.items()))
 
     return camera_info
