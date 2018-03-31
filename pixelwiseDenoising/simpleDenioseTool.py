@@ -8,6 +8,7 @@ A simplified version of denoising tool
 import numpy as np
 from glob import glob
 from os.path import exists
+# from ..utils import np_mp # this should be fixed later
 
 def compute_gain_matrix(folder_name):
     offsetMat = [];
@@ -49,10 +50,13 @@ def compute_gain_matrix(folder_name):
 
 def simpleDN(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
     # crop gain and offset matrix to the img size
+    assert img.ndim<5 and img.ndim>1, 'Image should be of 2D or 3D or 4D'
+    # img should be in form of (t), (z), x, y
+    dim_offset = img.ndim - 2
     if pixel_x is None:
-        pixel_x = (0, img.shape[0])
+        pixel_x = (0, img.shape[dim_offset])
     if pixel_y is None:
-        pixel_y = (0, img.shape[1])
+        pixel_y = (0, img.shape[dim_offset+1])
 
     # load gain and offset matrix
     if offset is None:
@@ -62,19 +66,26 @@ def simpleDN(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=N
         gain = np.load(folder_name +'/gain_mat.npy')
     offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
     gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+    for _ in range(dim_offset):
+        offset_ = offset_[np.newaxis, :]
+        gain_ = gain_[np.newaxis, :]
 
     # compute processesed image
     imgD = (img - offset_) / (gain_ + 1e-12)
-    imgD[gain_ < 0.5] = 1e-6
+    imgD[np.broadcast_to(gain_ < 0.5, imgD.shape)] = 1e-6
     imgD[imgD <= 0] = 1e-6
     return imgD
 
-def simpleDNStack(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
-    imgD = img.copy()
-    for nPlane in range(len(imgD)):
-        img_ = img[nPlane]
-        imgD[nPlane] = simpleDN(img_, folder_name=folder_name, pixel_x=pixel_x, pixel_y=pixel_y, offset=offset, gain=gain)
-    return imgD
+# def simpleDNStack(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
+#     imgD = img.copy()
+#     for nPlane in range(len(imgD)):
+#         img_ = img[nPlane]
+#         imgD[nPlane] = simpleDN(img_, folder_name=folder_name, pixel_x=pixel_x, pixel_y=pixel_y, offset=offset, gain=gain)
+#     return imgD
+
+# def simpleDNStackMP(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
+#     imgD = img.copy()
+#     return np_mp.parallel_apply_along_axis(simpleDN, 0, imgD, folder_name=folder_name, pixel_x=pixel_x, pixel_y=pixel_y, offset=offset, gain=gain)
 
 if __name__ == '__main__':
     compute_gain_matrix(folder_name='../pixelwiseDenoising/gainMat20180208')
