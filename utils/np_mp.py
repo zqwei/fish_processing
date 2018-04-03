@@ -1,50 +1,42 @@
 import multiprocessing as mp
 import numpy as np
+'''
+Multiprocessing the function along the axis=0 by spliting the array into chucks
+'''
 
-# multiprocessing numpy along one dimension
-
-def parallel_apply_along_axis(func1d, axis, arr, *args, **kwargs):
-    """
-    Like numpy.apply_along_axis(), but takes advantage of multiple
-    cores.
-    """
-    # Effective axis where apply_along_axis() will be applied by each
-    # worker (any non-zero axis number would work, so as to allow the use
-    # of `np.array_split()`, which is only done on axis 0):
-
-    # effective_axis = 1 if axis == 0 else axis
-    # if effective_axis != axis:
-    #     arr = arr.swapaxes(axis, effective_axis)
-
+def parallel_to_chunks(func1d, arr, *args, **kwargs):
     if mp.cpu_count() == 1:
         raise ValueError('Multiprocessing is not running on single core cpu machines, and consider to change code.')
 
-    # print('%d cpus for multiprocessing'%(mp.cpu_count()))
-
-    # Chunks for the mapping (only a few chunks):
-    # chunks = [(func1d, effective_axis, sub_arr, args, kwargs)
-    #           for sub_arr in np.array_split(arr, mp.cpu_count())]
-
-    chunks = [(func1d, axis, sub_arr, args, kwargs)
-                  for sub_arr in np.array_split(arr, mp.cpu_count())]
+    chunks = [(func1d, sub_arr, args, kwargs)
+              for sub_arr in np.array_split(arr, mp.cpu_count())]
 
     pool = mp.Pool()
-    individual_results = pool.map(unpacking_apply_along_axis, chunks)
+    individual_results = pool.map(unpacking_apply_func, chunks)
     # Freeing the workers:
     pool.close()
     pool.join()
 
-    return np.concatenate(individual_results)
+    results = ()
+    for i_tuple in range(len(individual_results[0])):
+        results = results + (np.concatenate([_[i_tuple] for _ in individual_results]), )
+    return results
 
-def unpacking_apply_along_axis(list_params):
-    """
-    Like numpy.apply_along_axis(), but and with arguments in a tuple
-    instead.
 
-    This function is useful with mp.Pool().map():
-    (1) map() only handles functions that take a single argument, and
-    (2) this function can generally be imported from a module, as required
-    by map().
-    """
-    func1d, axis, arr, args, kwargs = list_params
-    return np.apply_along_axis(func1d, axis, arr, *args, **kwargs)
+def unpacking_apply_func(list_params):
+    func1d, arr, args, kwargs = list_params
+    return func1d(arr, *args, **kwargs)
+
+
+# this is a testing function
+def print_shape(arr):
+    print(arr.shape)
+    return np.array([0]), np.array([1])
+
+def test():
+    x = np.random.rand(100, 10, 2)
+    arr0, arr1 = parallel_to_chunks(print_shape, x)
+    print(arr0)
+
+if __name__ == '__main__':
+    test()
