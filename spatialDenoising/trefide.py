@@ -1,7 +1,7 @@
 import cvxpy as cp
 import numpy as np
 import scipy as sp
-from utils import butter_highpass
+from .utils import butter_highpass
 
 import matplotlib.pyplot as plt
 """Noise Estimation"""
@@ -22,7 +22,7 @@ def _fft_estimator(signal, freq_range=[0.25, 0.5], max_samples=3072):
     ________
     Input:
         signals: (len_signal,) np.ndarray
-            Noise contaminated temporal signal 
+            Noise contaminated temporal signal
             (required)
         max_samples: positive integer
             Maximum number of samples which will be used in computing the
@@ -95,10 +95,10 @@ def _boot_estimator(signal, num_samples=1000, len_samples=25):
             Noise contaminated temporal signal
             (required)
         num_samples: positive integer
-            Number of bootstrap MSE estimates to average over 
+            Number of bootstrap MSE estimates to average over
             (default: 1000)
         len_samples: positive integer < len_signals
-            Length of subsamples used in bootstrap estimates 
+            Length of subsamples used in bootstrap estimates
            (default: 25)
     ________
     Output:
@@ -213,7 +213,7 @@ def _keep_min_consec(seq, min_consec=2):
 
 
 def _connect_regions(spike_loc, active_min_gap, active_buffer):
-    """ Connect breaches which occur within active_min_gap of one another into 
+    """ Connect breaches which occur within active_min_gap of one another into
     single contiguous regions and add a buffer to pad both sides of active regions"""
 
     # Locate all breaches
@@ -267,16 +267,16 @@ def detect_regions(signal,
                    active_discount=0,
                    plot_en=False):
     """
-    Partition input signal into regions dominated by spiking activity and 
-    subthreshold activity. Active regions are detected by thresholding the 
+    Partition input signal into regions dominated by spiking activity and
+    subthreshold activity. Active regions are detected by thresholding the
     highpass activity (extracted with butterworth filter) of the input signal.
     ________
     Input:
         signal: (len_signal,) np.ndarray
-            Collection of (gaussian) noise contaminated temporal signals 
+            Collection of (gaussian) noise contaminated temporal signals
             (required)
         stdv: positive integer
-            Standard deviation of (gaussian noise) contaminating input signal 
+            Standard deviation of (gaussian noise) contaminating input signal
             (default: estimate noise level with specified params)
         noise_estimator: string
             Method of estimating the noise level (when stdv is unspecified)
@@ -293,7 +293,7 @@ def detect_regions(signal,
             Choices:
                 'mean': Mean
                 'median': Median
-                'logmexp': Exponential of the mean of the logs 
+                'logmexp': Exponential of the mean of the logs
             (default: 'logmexp')
         noise_freq_range: (2,) np.ndarray or len 2 list of increasing elements
                     between 0 and 0.5
@@ -306,7 +306,7 @@ def detect_regions(signal,
             (default: 3072)
         noise_num_samples_boot: positive integer
             Number of bootstrapped estimates of MSE to average over in the
-            'boot' estimator 
+            'boot' estimator
             (default: 1000)
         noise_len_samples_boot: positive integer < len_signal
             Length of subsampled signals from which MSE estimated are
@@ -339,11 +339,11 @@ def detect_regions(signal,
             region
             (default: 400)
         active_buffer: positive integer
-            Append 'active_buffer' samples to each end of detected threshold 
-            crossings while defining regions of spiking activity 
+            Append 'active_buffer' samples to each end of detected threshold
+            crossings while defining regions of spiking activity
             (default: 50)
         active_discount: float in the interval [0,1)
-            While enforcing noise constrain, shrink the noise constraint by 
+            While enforcing noise constrain, shrink the noise constraint by
             'active_discount' over regions where spiking activity was detected
             (e.g. 0 is no shrinkage and .05 shrinks stdv by 5%)
             (default: 0)
@@ -430,24 +430,24 @@ def constrained_l1tf(signal,
     """
     Denoise a single input signal y by applying the L1-Trend Filtering objective
 
-       y_hat = argmin_{x} ||Dx||_1 
+       y_hat = argmin_{x} ||Dx||_1
                s.t. ||y[idx] - x[idx]||_2 <= stdv * sqrt(len(idx)) * fudge_factor[idx]
                for idx in region_indices
 
-    where D denotes a discrete difference operator, stdv the standard 
-    deviation of the input signal noise, and region_indices a partition of the 
-    input signal into disjoint segments over each of which a different noise 
-    constraint is enforced. 
+    where D denotes a discrete difference operator, stdv the standard
+    deviation of the input signal noise, and region_indices a partition of the
+    input signal into disjoint segments over each of which a different noise
+    constraint is enforced.
     ________
     Input:
         signal: (len_signal,) np.ndarray
-            Collection of (gaussian) noise contaminated temporal signals 
+            Collection of (gaussian) noise contaminated temporal signals
             (required)
         diff_mat: (_, len_signal) np.ndarray
             Difference operator used in L1 trend filtering objective function
             (default: discrete second order difference operator)
         stdv: positive integer
-            Standard deviation of (gaussian noise) contaminating input signal 
+            Standard deviation of (gaussian noise) contaminating input signal
             (default: estimate noise level with specified params)
         noise_estimator: string
             Method of estimating the noise level (when stdv is unspecified)
@@ -464,7 +464,7 @@ def constrained_l1tf(signal,
             Choices:
                 'mean': Mean
                 'median': Median
-                'logmexp': Exponential of the mean of the logs 
+                'logmexp': Exponential of the mean of the logs
             (default: 'logmexp')
         noise_freq_range: (2,) np.ndarray or len 2 list of increasing elements
                     between 0 and 0.5
@@ -477,20 +477,20 @@ def constrained_l1tf(signal,
             (default: 3072)
         noise_num_samples_boot: positive integer
             Number of bootstrapped estimates of MSE to average over in the
-            'boot' estimator 
+            'boot' estimator
             (default: 1000)
         noise_len_samples_boot: positive integer < len_signal
             Length of subsampled signals from which MSE estimated are
             generated in the 'boot' estimator
             (default: 25)
         region_indices: len num_regions list of np.ndarrays
-            Indices to define regions over which the noise constraint is 
-            enforced (if used must also supply 'region_fudge_factors' 
-            (default: auto-define region_indices and region_fudge_factors with 
+            Indices to define regions over which the noise constraint is
+            enforced (if used must also supply 'region_fudge_factors'
+            (default: auto-define region_indices and region_fudge_factors with
              'detect_regions' function)
         region_fudge_factors: (num_regions,) np.ndarray
-            Fudge factors applied to stdv while enfocing noise constrain over 
-            each region supplied by the 'region_indices' 
+            Fudge factors applied to stdv while enfocing noise constrain over
+            each region supplied by the 'region_indices'
             (default: np.ones(num_regions) i.e. enforce full noise constraint)
         region_filter_cutoff: positive integer
             cutoff parameter in butterworth filter used to separate highpass
@@ -514,16 +514,16 @@ def constrained_l1tf(signal,
             potential spiking activity
             (default: 5),
         region_active_min_gap: positive integer
-            Regions of spiking activity separated by less than 
-            'region_active_min_gap' samples of inactivity are combined into a 
+            Regions of spiking activity separated by less than
+            'region_active_min_gap' samples of inactivity are combined into a
             single continguous active region
             (default: 400)
         region_active_buffer: positive integer
-            Append 'active_buffer' samples to each end of detected threshold 
-            crossings while defining regions of spiking activity 
+            Append 'active_buffer' samples to each end of detected threshold
+            crossings while defining regions of spiking activity
             (default: 50)
         region_active_discount: float in the interval [0,1)
-            While enforcing noise constrain, shrink the noise constraint by 
+            While enforcing noise constrain, shrink the noise constraint by
             'active_discount' over regions where spiking activity was detected
             (e.g. 0 is no shrinkage and .05 shrinks stdv by 5%)
             (default: 0)
@@ -586,10 +586,10 @@ def constrained_l1tf(signal,
     # Solve CVX
     cp.Problem(objective, constraints).solve(solver=solver,
                     max_iters=1000,verbose=False)  # 'ECOS' or 'SCS'
-    
+
     lambdas = [constraint.dual_value for constraint in constraints]
     if lagrange_scaled: # scale by fudge factor for closed iterations:
-        lambdas = [fudge_factors[ii]/lambda_ if lambda_ !=0 else lambda_ for ii, 
+        lambdas = [fudge_factors[ii]/lambda_ if lambda_ !=0 else lambda_ for ii,
                    lambda_ in enumerate(lambdas)]
     return np.asarray(filtered_signal.value).flatten(), region_indices, lambdas
 

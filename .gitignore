@@ -1,5 +1,6 @@
 testing_file
 l1_trend_filter
+metastore_db
 
 *.pkl
 *.xlsx
