@@ -4,7 +4,7 @@ import numpy as np
 import multiprocessing
 import time
 import matplotlib.pyplot as plt
-import greedyPCA as gpca
+from . import greedyPCA as gpca
 from math import ceil
 
 from functools import partial
@@ -195,13 +195,13 @@ def tile_grids(dims,
     Output:
     ------
     """
-    
+
     if all(isinstance(n, int) for n in nblocks):
         d_row = block_split_size(dims[0],nblocks[0])
         d_col = block_split_size(dims[1],nblocks[1])
     else:
         d_row,d_col=nblocks
-        
+
     if indiv_grids:
         d_row = np.insert(d_row,0,0)
         d_col = np.insert(d_col,0,0)
@@ -213,14 +213,14 @@ def tile_grids(dims,
     d_col = np.diff(np.insert(d_col,0,0))
 
     number_of_blocks = (len(d_row))*(len(d_col))
-    
+
     #row_array = np.zeros((number_blocks,))
     #col_array = np.zeros((number_blocks,))
     array = np.zeros((number_of_blocks,2))
 
     for ii,row in enumerate(product(d_row,d_col)):
         array[ii]=row
-        
+
     """
     # for each row
     for ii in range(nblocks[0]):
@@ -246,7 +246,7 @@ def offset_tiling_dims(dims,nblocks,offset_case=None):
 
     rc0, rc1 = (row_array[1:]-r_offset)[[0,-1]]
     cc0, cc1 = (col_array[1:]-c_offset)[[0,-1]]
-    
+
     if offset_case is None:
         row_array=row_array[1:-1]
         col_array=col_array[1:-1]
@@ -264,7 +264,7 @@ def offset_tiling_dims(dims,nblocks,offset_case=None):
         col_array=col_array[1:-2]
     else:
         print('Invalid option')
-        
+
     indiv_dim = tile_grids(dims,
                            nblocks=[row_array,col_array],
                            indiv_grids=False)
@@ -291,7 +291,7 @@ def offset_tiling(W,nblocks=[10,10],offset_case=None):
     W_cs:       list
     W_rcs:      list
     """
-    
+
     #col_array,row_array = tile_grids(dims,nblocks)
 
     #r_offset,c_offset = extract_4dx_grid(dims,row_array,col_array)
@@ -300,14 +300,14 @@ def offset_tiling(W,nblocks=[10,10],offset_case=None):
 
     r_offset = vector_offset(row_array)
     c_offset = vector_offset(col_array)
-    
+
     rc0, rc1 = (row_array[1:]-r_offset)[[0,-1]]
     cc0, cc1 = (col_array[1:]-c_offset)[[0,-1]]
-    
+
     if offset_case is None:
         W_off = split_image_into_blocks(W,
                                         nblocks=nblocks)
-        
+
     elif offset_case == 'r':
         W = W[rc0:rc1,:,:]
         W_off = split_image_into_blocks(W,
@@ -317,7 +317,7 @@ def offset_tiling(W,nblocks=[10,10],offset_case=None):
         W = W[:,cc0:cc1,:]
         W_off = split_image_into_blocks(W,
                                         nblocks=[row_array[1:-1],
-                                                 col_array[1:-2]])        
+                                                 col_array[1:-2]])
     elif offset_case == 'rc':
         W = W[rc0:rc1,cc0:cc1,:]
         W_off = split_image_into_blocks(W,
@@ -445,7 +445,7 @@ def combine_4xd(nblocks,dW_,dW_rs,dW_cs,dW_rcs,dims_,dims_rs,dims_cs,dims_rcs,pl
 
     r_offset = vector_offset(row_array)
     c_offset = vector_offset(col_array)
-    
+
     r1, r2 = (row_array[1:]-r_offset)[[0,-1]]
     c1, c2 = (col_array[1:]-c_offset)[[0,-1]]
 
@@ -458,7 +458,7 @@ def combine_4xd(nblocks,dW_,dW_rs,dW_cs,dW_rcs,dims_,dims_rs,dims_cs,dims_rcs,pl
     ak1 = np.zeros(dims[:2])
     ak2 = np.zeros(dims[:2])
     ak3 = np.zeros(dims[:2])
-    
+
     ak0 = pyramid_tiles(dims,
                         dims_,
                         list_order='C')
@@ -475,7 +475,7 @@ def combine_4xd(nblocks,dW_,dW_rs,dW_cs,dW_rcs,dims_,dims_rs,dims_cs,dims_rcs,pl
     ak3[r1:r2,c1:c2] = pyramid_tiles(drcs,
                                        dims_rcs,
                                        list_order='C')
-    
+
     # Force outer most border = 1
     ak0[[0,-1],:]=1
     ak0[:,[0,-1]]=1
@@ -538,8 +538,9 @@ def run_single(Y,
     ------
     """
     cpu_count = multiprocessing.cpu_count()
+    cpu_count = max(cpu_count-3, 1)
     start=time.time()
-    pool = min(1,multiprocessing.Pool(cpu_count-3))
+    pool = multiprocessing.Pool(cpu_count)
     args=[[patch] for patch in Y]
     # define params in function
     c_outs = pool.starmap(partial(gpca.denoise_patch,

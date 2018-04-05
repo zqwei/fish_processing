@@ -2,6 +2,7 @@ testing_file
 l1_trend_filter
 metastore_db
 
+*.mp4
 *.pkl
 *.xlsx
 *.npz

@@ -1,12 +1,11 @@
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import tool_grid as tgrid
+from . import tool_grid as tgrid
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.ndimage.filters as filters
 import caiman as cm
 from caiman.summary_images import local_correlations_fft
-import tools as tools_
-import tool_grid as tgrid
+from . import tools as tools_
 
 
 def cn_ranks_dx_plot(ranks,
@@ -29,8 +28,8 @@ def cn_ranks_dx_plot(ranks,
                      figsize=figsize,
                      fontsize=fontsize)
     return
-        
-        
+
+
 
 def cn_ranks_plot(ranks,
                   dims,
@@ -56,23 +55,23 @@ def cn_ranks_plot(ranks,
     Cplot3:         np.array
                     array of ranks per tile
     """
-    
+
      #offset_tiling_dims(dims,nblocks,offset_case=None):
 
     dims, dim_block = tgrid.offset_tiling_dims(dims,
                                                nblocks,
                                                offset_case=offset_case)
-    
-    
+
+
     K1 = nblocks[0] - 1
     K2 = nblocks[1] - 1
-    
+
     K1 = K1-1 if offset_case =='r' else K1
     K2 =K2-1 if offset_case =='c' else K2
     K1 =K1-1 if offset_case =='rc' else K1
     K2 =K2-1 if offset_case =='rc' else K2
-        
-    
+
+
     Cplot3 = tgrid.cn_ranks(dim_block, ranks,
                             dims[:2], list_order=list_order)
     d1, d2 = dims[:2] // np.min(dims[:2])
@@ -99,7 +98,7 @@ def cn_ranks_plot(ranks,
 
     dim_block = np.asarray(dim_block)
     cols, rows = dim_block.T[0], dim_block.T[1]
-    
+
 
     row_array = np.insert(rows[::K1 + 1], 0, 0).cumsum()
     col_array = np.insert(cols[::K2 + 1], 0, 0).cumsum()
@@ -108,7 +107,7 @@ def cn_ranks_plot(ranks,
     ax3.set_yticks(col_array[:-1])
     ax3.set_xticks(row_array[:-1])
 
-    for ii, (row_val, col_val) in enumerate(zip(x.flatten(order=list_order), 
+    for ii, (row_val, col_val) in enumerate(zip(x.flatten(order=list_order),
                                                 y.flatten(order=list_order))):
         c = str(int(Cplot3[int(col_val + 1), int(row_val + 1)]) % max_rank)
         ax3.text(row_val + rows[ii] / 2, col_val +
@@ -252,8 +251,8 @@ def show_img(ax,
                                 vmax,
                                 cbar_ticks_number,
                                 endpoint=True)
-        cbar_ticks=np.round(cbar_ticks,4)   
-        cbar_ticks_labels= [format_tile%(cbar_) 
+        cbar_ticks=np.round(cbar_ticks,4)
+        cbar_ticks_labels= [format_tile%(cbar_)
                             for cbar_ in cbar_ticks]
         vmin, vmax = cbar_ticks[0], cbar_ticks[-1]
 
@@ -331,7 +330,7 @@ def comparison_plot(cn_see,
     # Calculate Cn to plot
     #######################
     for ii, array in enumerate(cn_see):
-        #print(array.shape)        
+        #print(array.shape)
         if option =='corr': # Correlation
             Cn, _ = cm.summary_images.correlation_pnr(array,
                                                       gSig=None,
@@ -385,7 +384,7 @@ def comparison_plot(cn_see,
     #cbar_enable= [False,False,True]
     #if share_colorbar:
     cbar_enable= not share_colorbar
-    
+
 
     for ii, Cn in enumerate(Cn_all):
         show_img(axarr[ii],

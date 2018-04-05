@@ -1,5 +1,5 @@
-import spatial_filtering
-import tool_grid
+from . import spatial_filtering
+from . import tool_grid
 import time
 # ____________________________
 # Wrapper to call denoisers

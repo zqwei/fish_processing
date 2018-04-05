@@ -7,8 +7,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from sklearn.utils.extmath import randomized_svd
 import matplotlib.pyplot as plt
 
-import spatial_filtering as sp_filters
-import tools as tools
+from . import spatial_filtering as sp_filters
+from . import tools as tools
 
 
 from sklearn import preprocessing
@@ -20,9 +20,9 @@ import multiprocessing
 import itertools
 import time
 
-import trefide
-import util_plot as uplot
-import tools as tools_
+from . import trefide
+from . import util_plot as uplot
+from . import tools as tools_
 
 
 def kurto_one(x):
@@ -136,7 +136,7 @@ def choose_rank(Vt,
     if enforce_both:
         corr= True
         kurto = True
-        
+
     n, L = Vt.shape
     vtid = np.zeros(shape=(3, n)) * np.nan
 
@@ -160,12 +160,12 @@ def choose_rank(Vt,
     keep = list(set(keep1 + keep2))
     loose = np.setdiff1d(np.arange(n),keep)
     loose = list(loose)
-    
+
     if enforce_both:
         keep1 = np.intersect1d(keep1,keep2)
         keep2 = keep1
         print(len(keep1))
-    
+
 
     vtid[0, keep1] = 1  # components stored due to cov
     vtid[1, keep2] = 1  # components stored due to kurto
@@ -324,7 +324,7 @@ def compute_svd(M,
     elif method == 'randomized':
         U, s, Vt = randomized_svd(M, n_components=n_components,
                 n_iter=7, random_state=None)
-    
+
     if reconstruct:
         return U.dot(np.diag(s).dot(Vt))
     return U, s, Vt
@@ -788,7 +788,7 @@ def greedy_component_denoiser(Y,
                 k1 is the updated estimated rank of Y
                 k1 >= k depending on additional structured components added from residual.
     """
-    
+
     #mean_th = mean_th+0.05
     num_components, T = V_hat.shape
 

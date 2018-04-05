@@ -107,7 +107,9 @@ def _get_spline_trend(data,
     TODO: docs
     """
     # get knots from stim
-    knots = _get_knots(stim, k=order, followup=100, spacing=250)
+    if stim is None:
+        stim = np.zeros(data.shape[-1])
+    knots = _get_knots(stim, k=order, followup=followup, spacing=spacing)
     x = np.arange(len(stim))
 
     if disc_idx is not None:
@@ -145,7 +147,7 @@ def detrend(mov,
             axis=-1,
             robust=True,
             visualize=None):
-    """ Detrends Q-state video via stim & discontinuity spline fit. 
+    """ Detrends Q-state video via stim & discontinuity spline fit.
     Removes potential discontinuity artifacts afterwards
     TODO: docs
     """
@@ -160,18 +162,20 @@ def detrend(mov,
                               axis=axis,
                               robust=robust)
 
-    # Remove samples from discontinuity locations
-    del_idx = np.sort(np.append(np.append(disc_idx, disc_idx + 1),
-                                disc_idx - 1))
-    stim = np.delete(stim, del_idx)
-    mov_detr = np.delete(np.subtract(mov, trend), del_idx, axis=-1)
-    trend = np.delete(trend, del_idx, axis=-1)
+    mov_detr = np.subtract(mov, trend)
+    # Remove samples from discontinuity location
+    if disc_idx is not None:
+        del_idx = np.sort(np.append(np.append(disc_idx, disc_idx + 1),
+                                    disc_idx - 1))
+        stim = np.delete(stim, del_idx)
+        mov_detr = np.delete(mov_detr, del_idx, axis=-1)
+        trend = np.delete(trend, del_idx, axis=-1)
 
     # Optionally show spline fit to single pixel
     if visualize:
         row = visualize[0]
         col = visualize[1]
-        T = len(stim)
+        T = mov.shape[-1]
         f, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 8))
         ax1.plot(np.arange(T), np.delete(mov[row, col, :], del_idx), 'b')
         ax1.plot(np.arange(T), trend[row, col, :], 'r')
@@ -181,11 +185,12 @@ def detrend(mov,
         plt.show()
 
     # Recompute problem areas
-    disc_idx[1:] = disc_idx[1:] - np.cumsum(np.ones(len(disc_idx) - 1) * 3)
-    disc_idx = disc_idx - 1
-    disc_idx = np.append(disc_idx,
-                         np.argwhere(filt.convolve1d(stim > 0,
-                                                     np.array([1, -1]))))
+    if disc_idx is not None:
+        disc_idx[1:] = disc_idx[1:] - np.cumsum(np.ones(len(disc_idx) - 1) * 3)
+        disc_idx = disc_idx - 1
+        disc_idx = np.append(disc_idx,
+                             np.argwhere(filt.convolve1d(stim > 0,
+                                                         np.array([1, -1]))))
     return mov_detr, trend, stim, np.unique(disc_idx)
 
 
@@ -193,7 +198,7 @@ def retrend(trend_components,
             disc_idx,
             stim,
             all_quad=False):
-    """ Refit the raw data with trend after removing photobleach trend from 
+    """ Refit the raw data with trend after removing photobleach trend from
         each stim onset
     """
     bleach_trend, del_idx = _get_photobleach_trend(trend_components,
