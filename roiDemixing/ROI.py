@@ -364,7 +364,7 @@ def get_spikes(trace, superfactor=10, threshs=(.4, .6, .75)):
 
 def optimize_trace(img,mean_img,cell_inds,use_NMF=False):
 
-
+    print('-----------\n start optimizing')
     ROI1_image=np.zeros(mean_img.shape)
     ROI1_image[cell_inds]=1
 
@@ -488,6 +488,7 @@ def optimize_trace(img,mean_img,cell_inds,use_NMF=False):
         noise_M=tcourse_zeroed[noise_inds,:]
 
         if use_NMF:
+            print('Use NMF')
             W = -peak_M.mean(0)
             SN[0] = abs(np.dot(peak_M, W).mean() / np.dot(noise_M, W).std())
             for _ in range(5):
@@ -589,9 +590,10 @@ def optimize_trace(img,mean_img,cell_inds,use_NMF=False):
             print("%d spikes found" % len(spiketimes2))
 
         if (not_active==1):
+            print('reconsider as non active cell\n first_timecourse saved')
             ans = np.array([(first_timecourse,np.array(first_timecourse.shape),norm_tcourse1,
-                             np.zeros(norm_tcourse1.shape),spike_tcourse1,np.zeros(spike_tcourse1.shape),
-                             tlimit1,0, threshold1,0, spiketimes1, super_times11,kernel1, super_kernel1, ROI_candidates[0],ROI_candidates[1],
+                             np.zeros(norm_tcourse1.shape),spike_tcourse2,np.zeros(spike_tcourse1.shape),
+                             tlimit1,0, threshold1,0, spiketimes2, super_times11,kernel1, super_kernel1, ROI_candidates[0],ROI_candidates[1],
                              weight_init,np.zeros(weight_init.shape),np.zeros((21,3)),0.,0.,0)],
                              dtype=[('raw_tcourse1', np.ndarray),
                                     ('raw_tcourse2', np.ndarray),
