@@ -594,7 +594,7 @@ def optimize_trace(img,mean_img,cell_inds,use_NMF=False):
             ans = np.array([(first_timecourse,np.array(first_timecourse.shape),norm_tcourse1,
                              np.zeros(norm_tcourse1.shape),spike_tcourse2,np.zeros(spike_tcourse1.shape),
                              tlimit1,0, threshold1,0, spiketimes2, super_times11,kernel1, super_kernel1, ROI_candidates[0],ROI_candidates[1],
-                             weight_init,np.zeros(weight_init.shape),np.zeros((21,3)),0.,0.,0)],
+                             weight_init,W,np.zeros((21,3)),0.,0.,0)],
                              dtype=[('raw_tcourse1', np.ndarray),
                                     ('raw_tcourse2', np.ndarray),
                                     ('norm_tcourse1', np.ndarray),
