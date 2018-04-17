@@ -19,18 +19,18 @@ import numpy as np
 def merge_components(A,
                      C,
                      dview=None,
-                     thr=0.85,
+                     thr=0.5,
                      fast_merge=True,
                      mx=1000):
     """ Merging of spatially overlapping components that have highly correlated temporal activity
     The correlation threshold for merging overlapping components is user specified in thr
 Parameters:
------------     
+-----------
 A: sparse matrix
      matrix of spatial components (d x K)
 C: np.ndarray
      matrix of temporal components (K x T)
-thr:   scalar between 0 and 1 
+thr:   scalar between 0 and 1
      correlation threshold for merging (default 0.85)
 mx:    int
      maximum number of merging operations (default 50)
@@ -45,7 +45,7 @@ C:     np.ndarray
 nr:    int
     number of components after merging
 merged_ROIs: list
-    index of components that have been merged     
+    index of components that have been merged
     """
 
     # only place Y is used ...TODO replace with A,C

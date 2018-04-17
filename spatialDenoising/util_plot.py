@@ -443,7 +443,7 @@ def intialization_plot(data_highpass,
 
     if min_corr:
         corr_image[corr_image < min_corr] = 0
-    show_img(axarr[0], corr_image, orientation=orientation)
+    show_img(axarr[0], corr_image, cbar_orientation=orientation)
     axarr[0].set_title('Thresholded Corr Image')
 
     # Compute & plot pnr image
@@ -453,7 +453,7 @@ def intialization_plot(data_highpass,
     pnr_image = filters.median_filter(pnr_image,
                                       size=(int(round(patch_radius / 4)),) * 2,
                                       mode='constant')
-    show_img(axarr[1], pnr_image, orientation=orientation)
+    show_img(axarr[1], pnr_image, cbar_orientation=orientation)
     axarr[1].set_title('Thresholded & Filtered PNR Image')
 
     # Display PLot

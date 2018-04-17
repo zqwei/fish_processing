@@ -2,12 +2,12 @@ from __future__ import division, print_function
 import numpy as np
 import scipy.sparse as spr
 import scipy
-import trefide
-import merging
+from . import trefide as trefide
+from . import merging
 import os
 import sys
 from scipy.ndimage import median_filter, maximum_filter
-from utils import gaussian_bandpass, HALS4activity, HALS4shape
+from .utils import gaussian_bandpass, HALS4activity, HALS4shape
 from skimage import measure
 from caiman.summary_images import local_correlations_fft
 from caiman.source_extraction.cnmf.spatial import update_spatial_components
@@ -642,7 +642,8 @@ def nmf_iter(data,
              visualize=False,
              merge_after=None,
              disc_idx=None,
-             buffer=10):
+             buffer=10,
+             mergingthr=0.5):
     """  """
     # Extract video dimensions
     d1, d2, T = data.shape
@@ -703,7 +704,7 @@ def nmf_iter(data,
                 (spatial_components,
                  temporal_components,
                  _, _) = merging.merge_components(spatial_components,
-                                                  temporal_components)
+                                                  temporal_components, thr=mergingthr)
                 if denoise_temporal:  # TODO: replace with option in merge
                     temporal_components = trefide.denoise(temporal_components,
                                                           region_active_discount=.1)
@@ -777,7 +778,7 @@ def spatial_summary(spatial_components, dims, n_col=5):
 
                 plt.imshow(footprint[:, c1:c2],
                            cmap='nipy_spectral_r')
-                plt.title('Spatial Component {}'.format(idx))
+                plt.title('SC #{}'.format(idx))
 
     return None
 
