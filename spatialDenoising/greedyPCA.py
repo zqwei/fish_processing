@@ -476,7 +476,7 @@ def denoise_patch(M,
     """
     dimsM = M.shape
     start = time.time()
-    Yd, vtids = denoise_components(M.reshape((np.prod(dimsM[:2]),dimsM[2]),order='F'),
+    Yd, vtids = denoise_components(M.reshape((np.prod(dimsM[:-1]),dimsM[-1]),order='F'),
                                    maxlag=maxlag,
                                    tsub=tsub,
                                    noise_norm=noise_norm,
@@ -1060,7 +1060,7 @@ def denoise_components(data_all,
     """
     if data_all.ndim == 3:
         dims = data_all.shape
-        data_all = data_all.reshape((np.prod(dims[:2]),dims[2]), order='F')
+        data_all = data_all.reshape((np.prod(dims[:-1]),dims[-1]), order='F')
     data_all = data_all.T.astype('float32')
     # In a 2d matrix, we get rid of any broke (inf) pixels
     # we assume fixed broken across time

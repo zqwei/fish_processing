@@ -3,6 +3,9 @@ l1_trend_filter
 metastore_db
 *.txt
 *.rar
+*.out
+*.err
+dask-worker-space
 
 core.*
 *.mp4
