@@ -1,4 +1,4 @@
-
+import numpy as np
 
 
 def low_rank_svd(img, rank_k):
@@ -58,7 +58,7 @@ def run_single(blocks, maxlag=5, confidence=0.999, greedy=False, fudge_factor=0.
     Yds = [out_[0] for out_ in c_outs]
     vtids = [out_[1] for out_ in c_outs]
     vtids = np.asarray(vtids).astype('int')
-    print('Blocks(=%d) run time: %f'%(len(Y),time.time()-start))
+    print('Blocks(=%d) run time: %f'%(len(blocks),time.time()-start))
     return Yds, vtids
 
 def combine_blocks(block_data, block_size, block_corrs):
