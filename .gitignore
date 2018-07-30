@@ -1,5 +1,13 @@
+# ignore all old and tmp files
+OldNotebooks
 tmpData
 tmpFigures
+tmpMovie
+tmp
+
+# ignore all local data
+Data
+
 testing_file
 l1_trend_filter
 metastore_db

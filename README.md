@@ -1,5 +1,15 @@
 # Fish data processing
 
+## TODO List
+* Motion correction algorithm (smooth algorithm)
+* Demixing algorithm
+    * Cell detection as initialization
+    * NMF with TF as further demixing
+    * Supervoxel algorithm
+    * Mannually correction or neural network based correction
+* Spike detection using neural network
+* Subthreshould activity
+
 ## 0. Environment setup
 
 ### 0.1 Reference to Davis' flow of spark setting (bash file etc.)
