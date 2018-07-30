@@ -48,7 +48,7 @@ def detected_max_spike(m, x_, voltr_, thres=0.4):
     # spkcount__ = np.logical_and(spkcount_, spk_diff)
     return spkcount_
 
-def detected_peak_spikes(m, x_, voltr_, thres=0.4, devoltr_ = None):
+def detected_peak_spikes(m, x_, voltr_, thres=0.4, devoltr_ = None, peakThres=.9, peak_minDist=10, smallPeakThres = 20):
     pred_x_test = m.predict(x_)
     window_length = x_.shape[1]
     spkInWindow = pred_x_test>thres
@@ -58,12 +58,12 @@ def detected_peak_spikes(m, x_, voltr_, thres=0.4, devoltr_ = None):
     for idx, nspk in enumerate(spkInWindow):
         if nspk:
             x__ = voltr_[idx:idx+window_length]
-            spk_idx = peakutils.indexes(x__, thres=.9, min_dist=10)
+            spk_idx = peakutils.indexes(x__, thres=peakThres, min_dist=peak_minDist)
             spkcount_[idx+spk_idx] = True
     if devoltr_ is not None:
         diff = voltr_ - devoltr_
         diff_ = diff[spkcount_.astype(np.bool)]
-        thres = np.percentile(diff_, 20)
+        thres = np.percentile(diff_, smallPeakThres)
         spk_diff = diff > thres
         spkcount_ = np.logical_and(spkcount_, spk_diff)
     return spkcount_
