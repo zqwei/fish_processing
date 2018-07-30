@@ -1,3 +1,10 @@
+'''
+A set of posthoc processing from demix algorithm
+------------------------
+Ziqiang Wei @ 2018
+weiz@janelia.hhmi.org
+'''
+
 from funimag.superpixel_analysis import *
 import numpy as np
 
@@ -17,7 +24,7 @@ def recompute_nmf(rlt_, mov):
         b_ = np.matmul(fb, ff.T)+b
     else:
         b_ = b
-    
+
     mov_pos = pos_sig_correction(mov, -1)
     mov_no_background = mov_pos - b_.reshape((dims[0], dims[1], len(b_)//dims[0]//dims[1]), order='F')
     A = rlt_['fin_rlt']['a']
@@ -28,7 +35,7 @@ def recompute_nmf(rlt_, mov):
     return C_, b_+mov_res_, mov_res-mov_res_
 
 def compute_res(mov_pos, rlt_):
-    return reconstruct(mov_pos, rlt_['fin_rlt']['a'], rlt_['fin_rlt']['c'], 
+    return reconstruct(mov_pos, rlt_['fin_rlt']['a'], rlt_['fin_rlt']['c'],
                        rlt_['fin_rlt']['b'], fb=rlt_['fin_rlt']['fb'], ff=rlt_['fin_rlt']['ff'])
 
 def demix_whole_data_snr(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10],
