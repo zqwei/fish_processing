@@ -4,6 +4,7 @@ tmpData
 tmpFigures
 tmpMovie
 tmp
+tmpPackages
 
 # ignore all local data
 Data
