@@ -73,7 +73,23 @@ def simpleDN(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=N
     # compute processesed image
     imgD = (img - offset_) / (gain_ + 1e-12)
     imgD[np.broadcast_to(gain_ < 0.5, imgD.shape)] = 1e-6
+    imgD[np.broadcast_to(gain_ > 5, imgD.shape)] = 1e-6
     imgD[imgD <= 0] = 1e-6
+    return imgD
+
+def smoothDeadPixelBoxCar(img):
+    from scipy.signal import convolve2d
+    win_size = 1
+    box_blur = np.ones((win_size*2+1, win_size*2+1))
+    box_blur[win_size, win_size] = 0
+    box_blur = box_blur/box_blur.sum()   
+    imgD = np.empty(img.shape)
+    for n_ in range(img.shape[0]):
+        img_ = img[n_].copy()
+        box_img = convolve2d(img_, box_blur, boundary='symm', mode='same')
+        min_ = box_img.min()*100
+        img_[img_<min_] = box_img[img_<min_]
+        imgD[n_] = img_
     return imgD
 
 # def simpleDNStack(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
