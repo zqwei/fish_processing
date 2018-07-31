@@ -17,7 +17,9 @@ def elapsed_since(start):
 
 def get_process_memory():
     process = psutil.Process(os.getpid())
-    return process.memory_info().rss
+    mem_ = process.memory_info().rss/1024/1024/1024
+    print('RAM used %0.4f GB'%(mem_))
+    return  mem_ # from bytes to GB
 
 
 def profile(func):

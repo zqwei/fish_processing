@@ -9,6 +9,10 @@ tmpPackages
 # ignore all local data
 Data
 
+# ignore dask
+dask-worker*
+worker*
+
 testing_file
 l1_trend_filter
 metastore_db

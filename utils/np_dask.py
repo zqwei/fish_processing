@@ -11,6 +11,8 @@ Ziqiang Wei @ 2018
 weiz@janelia.hhmi.org
 '''
 
+import numpy as np
+import warnings
 
 def setup_cluster():
     from dask_drmaa import DRMAACluster
@@ -38,6 +40,14 @@ def setup_workers(numCore):
 def terminate_workers(cluster, client):
     client.close()
     cluster.close()
+    
+def warn_on_large_chunks(x):
+    import itertools
+    shapes = list(itertools.product(*x.chunks))
+    nbytes = [x.dtype.itemsize * np.prod(shape) for shape in shapes]
+    if any(nb > 1e9 for nb in nbytes):
+        warnings.warn("Array contains very large chunks")
+        
 
 if __name__ == '__main__':
     print('Testing setup of Dask---')
