@@ -48,7 +48,7 @@ def clear_variables(x):
         for x_ in x:
             del x_
     else:
-        del x_
+        del x
     gc.collect()
 
 

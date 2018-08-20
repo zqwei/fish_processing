@@ -1,5 +1,6 @@
 from trefide.preprocess import _get_spline_trend
 import numpy as np
+from scipy.signal import butter, lfilter
 
 def detrend(mov,
             stim=None,
@@ -42,7 +43,38 @@ def detrend(mov,
     return mov_detr, trend, stim, np.unique(disc_idx)
 
 
-def detrend_sg(mov, win_=201, order=7):
+def trend(mov, order=3, followup=100, spacing=200, q=.05, axis=-1, robust=True):
+    # Adaptive spline fit
+    stim = np.zeros(mov.shape[-1])
+    return _get_spline_trend(data=mov, stim=stim, disc_idx=None, order=order,
+                             followup=followup, spacing=spacing, q=q, axis=axis, robust=robust),
+
+
+def trend_sg(mov, win_=201, order=7):
     from scipy.signal import savgol_filter
     trend = savgol_filter(Y, win_, order, axis=-1)
-    return Y - trend, trend
+    return trend
+
+def butter_bandpass(lowcut, highcut, fs, order=5):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = butter(order, [low, high], btype='band')
+    return b, a
+
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
+
+def butter_lowpass(cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+def butter_lowpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_lowpass(cutoff, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
