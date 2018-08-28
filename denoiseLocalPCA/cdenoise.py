@@ -114,7 +114,7 @@ def combine_blocks_from_files(block_data_files, block_size, block_corrs):
     for nfile, ncorr in zip(block_data_files, block_corrs):
         _ = np.load(nfile)
         ndata = _['Yds']
-        nrank = _['vtids']
+        nrank = _['vtids'].astype('int')
         _, z_arr, x_arr, y_arr = ncorr
         block_mat[z_arr.min():z_arr.max()+1, x_arr.min():x_arr.max()+1, y_arr.min():y_arr.max()+1, :] += ndata
         block_count[z_arr.min():z_arr.max()+1, x_arr.min():x_arr.max()+1, y_arr.min():y_arr.max()+1, :] += 1
