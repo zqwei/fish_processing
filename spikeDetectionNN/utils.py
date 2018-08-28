@@ -60,7 +60,7 @@ def detected_peak_spikes(m, x_, voltr_, thres=0.4, devoltr_ = None, peakThres=.9
             x__ = voltr_[idx:idx+window_length]
             spk_idx = peakutils.indexes(x__, thres=peakThres, min_dist=peak_minDist)
             spkcount_[idx+spk_idx] = True
-    if devoltr_ is not None:
+    if (devoltr_ is not None) and spkcount_.sum()>0:
         diff = voltr_ - devoltr_
         diff_ = diff[spkcount_.astype(np.bool)]
         thres = np.percentile(diff_, smallPeakThres)
