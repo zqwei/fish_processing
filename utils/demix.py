@@ -15,7 +15,7 @@ def recompute_C_matrix(sig, A):
     d1, d2, T = sig.shape
     return np.linalg.inv(np.array(A.T.dot(A))).dot(A.T.dot(np.reshape(sig, (d1*d2,T), order='F')))
 
-def recompute_nmf(rlt_, mov):
+def recompute_nmf(rlt_, mov, comp_thres=0):
     b = rlt_['fin_rlt']['b']
     fb = rlt_['fin_rlt']['fb']
     ff = rlt_['fin_rlt']['ff']
@@ -24,10 +24,10 @@ def recompute_nmf(rlt_, mov):
         b_ = np.matmul(fb, ff.T)+b
     else:
         b_ = b
-
     mov_pos = pos_sig_correction(mov, -1)
     mov_no_background = mov_pos - b_.reshape((dims[0], dims[1], len(b_)//dims[0]//dims[1]), order='F')
     A = rlt_['fin_rlt']['a']
+    A = A[:, (A>0).sum(axis=0)>comp_thres]
     C_ = recompute_C_matrix(mov_no_background, A)
     mov_res = reconstruct(mov_pos, A, C_.T, b_, fb=fb, ff=ff)
     mov_res_ = mov_res.mean(axis=-1, keepdims=True)
