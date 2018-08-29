@@ -5,6 +5,7 @@ tmpFigures
 tmpMovie
 tmp
 tmpPackages
+denoiseLocalPCA/*.ipynb
 
 # ignore all local data
 Data
