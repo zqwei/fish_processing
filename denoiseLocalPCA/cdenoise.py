@@ -9,19 +9,30 @@ def low_rank_svd(img, rank_k):
     return U.dot(np.diag(s).dot(Vt)).reshape((dx, dy, dt))
 
 def pad_index(arr, overlap_step, max_value):
-    if arr[0]>overlap_step:
-        arr = np.append(arr, arr[0]+np.arange(-overlap_step,0))
-    if arr.max()<max_value-overlap_step:
-        arr = np.append(arr, arr.max()+np.arange(1,overlap_step))
-    return np.sort(arr.flatten())
+    # if arr[0]>overlap_step:
+    #     arr = np.append(arr, arr[0]+np.arange(-overlap_step,0))
+    # if arr.max()<max_value-overlap_step:
+    #     arr = np.append(arr, arr.max()+np.arange(1,overlap_step))
+    # return np.sort(arr.flatten())
+    if overlap_step>0:
+        arr1 = [_-overlap_step for _ in arr]
+        arr2 = [_+overlap_step for _ in arr]
+        for _ in arr2:
+            arr1.append(_)
+        arr1[0] = arr1[0][arr1[0]>=0]
+        arr1[-1] = arr1[-1][arr1[-1]<max_value]
+        return arr1
+    else:
+        return arr
 
 def split_to_blocks(nsize, nblocks, overlap_step):
     assert len(nsize) == len(overlap_step), print("lengths not matched")
     arr = []
     for nsize_, nblock_, overlap_ in zip(nsize, nblocks, overlap_step):
         arr_ = np.array_split(range(nsize_), nblock_)
-        arr_ = [pad_index(_, overlap_, nsize_) for _ in arr_]
-        arr.append(arr_)
+        # arr_ = [pad_index(_, overlap_, nsize_) for _ in arr_]
+        # arr.append(arr_)
+        arr.append(pad_index(arr_, overlap_, nsize_))
     return arr
 
 def get_blocks_from_index_arr(imgStack, arrs):
@@ -67,22 +78,22 @@ def gpca_to_file(patch_index, files='', maxlag=5, confidence=0.999, greedy=False
     patch = patch_index[0]
     nfile = patch_index[1]
     c_out = gpca.denoise_patch(patch, maxlag=maxlag, confidence=confidence, greedy=greedy,
-                               fudge_factor=fudge_factor, mean_th_factor=mean_th_factor, 
-                               U_update=U_update, min_rank=min_rank, stim_knots=stim_knots, 
+                               fudge_factor=fudge_factor, mean_th_factor=mean_th_factor,
+                               U_update=U_update, min_rank=min_rank, stim_knots=stim_knots,
                                stim_delta=stim_delta)
     np.savez(files + '%06d'%(nfile), Yds=c_out[0], vtids=c_out[1])
     return None
 
 def run_single_to_files(blocks, files, maxlag=5, confidence=0.999, greedy=False, fudge_factor=0.99, mean_th_factor=1.15,
-               U_update=False, min_rank=1, stim_knots=None, stim_delta=200):    
+               U_update=False, min_rank=1, stim_knots=None, stim_delta=200):
     import time
     import multiprocessing
     from functools import partial
-    
+
     func = partial(gpca_to_file, files=files, maxlag=maxlag, confidence=confidence, greedy=greedy,
                    fudge_factor=fudge_factor, mean_th_factor=mean_th_factor, U_update=U_update,
                    min_rank=min_rank, stim_knots=stim_knots, stim_delta=stim_delta)
-    
+
     start=time.time()
     cpu_count = multiprocessing.cpu_count()
     args=[[patch[0], n_] for n_, patch in enumerate(blocks)]
