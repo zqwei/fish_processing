@@ -1,11 +1,7 @@
 # ignore all old and tmp files
 OldNotebooks
-tmpData
-tmpFigures
-tmpMovie
-tmp
-tmpPackages
-denoiseLocalPCA/*.ipynb
+tmp*
+*.ipynb
 
 # ignore all local data
 Data
