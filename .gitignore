@@ -2,6 +2,7 @@
 OldNotebooks
 tmp*
 *.ipynb
+notebooks
 
 # ignore all local data
 Data
