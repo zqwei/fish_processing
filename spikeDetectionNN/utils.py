@@ -17,7 +17,7 @@ def plot_spks(plt, spkcount, ratio, label='Raw spike time'):
     plt.plot(np.array(np.where(spkTime)).T, spkcount[spkTime]*ratio,'o', label=label)
 
 
-def plot_test_performance(m, x_test, labels):
+def plot_test_performance(m, x_test, labels, plt=plt):
     pred_x_test = m.predict(x_test)
     labels = labels.astype(np.bool)
     sns.distplot(pred_x_test[labels], label='Spike')
@@ -27,7 +27,6 @@ def plot_test_performance(m, x_test, labels):
     plt.xlabel('Predition of spike probability')
     plt.ylabel('Counts')
     plt.legend()
-    plt.show()
 
 def detected_max_spike(m, x_, voltr_, thres=0.4):
     pred_x_test = m.predict(x_)
