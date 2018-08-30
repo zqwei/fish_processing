@@ -9,11 +9,6 @@ def low_rank_svd(img, rank_k):
     return U.dot(np.diag(s).dot(Vt)).reshape((dx, dy, dt))
 
 def pad_index(arr, overlap_step, max_value):
-    # if arr[0]>overlap_step:
-    #     arr = np.append(arr, arr[0]+np.arange(-overlap_step,0))
-    # if arr.max()<max_value-overlap_step:
-    #     arr = np.append(arr, arr.max()+np.arange(1,overlap_step))
-    # return np.sort(arr.flatten())
     if overlap_step>0:
         arr1 = [_-overlap_step for _ in arr]
         arr2 = [_+overlap_step for _ in arr]
@@ -30,8 +25,6 @@ def split_to_blocks(nsize, nblocks, overlap_step):
     arr = []
     for nsize_, nblock_, overlap_ in zip(nsize, nblocks, overlap_step):
         arr_ = np.array_split(range(nsize_), nblock_)
-        # arr_ = [pad_index(_, overlap_, nsize_) for _ in arr_]
-        # arr.append(arr_)
         arr.append(pad_index(arr_, overlap_, nsize_))
     return arr
 

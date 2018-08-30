@@ -8,6 +8,7 @@ This is the data processing used for the calcium and voltage imaging
     * [Caiman](https://github.com/flatironinstitute/CaImAn) -- code for visualization, basic statistics such as SNR, local correlation etc.
     * [FunImag](https://github.com/paninski-lab/funimag) -- superpixel cell segmentation
     * [Trefide](https://github.com/ikinsella/trefide) -- trend filtering, total variational denoise
+    * Other packages required are shown https://github.com/zqwei/computer_setup
 
 ## Preprocessing of raw images -- Pixelwise denoising
 ## Image registration and motion correction

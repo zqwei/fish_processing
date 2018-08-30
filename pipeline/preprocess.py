@@ -39,9 +39,10 @@ def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=Fal
     ## smooth dead pixels
     win_ = 3
     imgD_ = median_filter(imgD, size=(1, win_, win_))
+    np.save(fishName+'/imgDNoMotion', imgD_)
     return imgD_
 
-def regidStacks(move, fix):
+def regidStacks(move, fix=None, trans=None):
     if move.ndim < 3:
         move = move[np.newaxis, :]
     trans_move = move.copy()
@@ -60,8 +61,8 @@ def motion_correction(imgD_, fix_, fishName):
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
     trans.ss_sigma_factor = 1.0
-    # imgStackMotion, imgStackMotionVar = parallel_to_chunks(regidStacks, imgStack, fix=fix)
-    imgDMotion, imgDMotionVar = parallel_to_chunks(regidStacks, imgD_, fix=fix_)
+    # imgStackMotion, imgStackMotionVar = parallel_to_chunks(regidStacks, imgStack, fix=fix, trans=trans)
+    imgDMotion, imgDMotionVar = parallel_to_chunks(regidStacks, imgD_, fix=fix_, trans=trans)
     # np.save('tmpData/imgStackMotion', imgStackMotion)
     # np.save('tmpData/imgStackMotionVar', imgStackMotionVar)
     np.save(fishName+'/imgDMotion', imgDMotion)
