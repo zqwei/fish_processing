@@ -1,5 +1,6 @@
 from preprocess import pixel_denoise, motion_correction
 from denoise import denose_2dsvd, detrend
+from ..utils.memory import get_process_memory, clear_variables
 
 class pipe:
     def __init__(self):
@@ -48,7 +49,8 @@ class pipe:
             print('Please set self.detrend_split divisible to image height')
         Y = None
         imgDMotion = None
-        del Y, imgDMotion
+        clear_variables((Y, imgDMotion))
+        get_process_memory();
 
         # denoise
         Y_d = np.load(f'{self.fishName}/Y_d.npy')
@@ -63,7 +65,8 @@ class pipe:
         Y_amp= _['Y_d_std']
         Y_svd= _['Y_svd']
         _=None
-        del _
+        clear_variables(_)
+        get_process_memory();
         mov = Y_svd * Y_amp
         mov_ = mov + np.random.normal(size=Y_svd.shape)*0.7
         pass_num = 3
@@ -89,4 +92,13 @@ class pipe:
                                    update_after=4)
         with open(f'{self.fishName}/Y_demix_rlt.pkl', 'wb') as file_:
             pickle.dump(rlt_, file_)
+        return None
+
+    def compute_dff(self):
+        return None
+
+    def compute_spike(self):
+        return None
+
+    def compute_subthreshold(self):
         return None

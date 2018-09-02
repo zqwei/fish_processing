@@ -30,7 +30,31 @@ This is the data processing used for the calcium and voltage imaging
 ### State space model
 * Brain states and change detections
 
+--------------------------
 ## Extended -- Behavioral data
 
 ## Extended -- Single-cell RNA seq
 https://github.com/zqwei/single_cell_zebrafish
+
+--------------------------
+## TODO
+### Merge git repos
+* denoiseLocalPCA
+* zfish_osc
+* spike-detection-voltron
+* cmos-denoise
+* single-cell rna seq
+
+### Sparse PCA
+* Add prymid_tiles weight to fix squares in denoise movies
+
+### Demix
+* On-line version of NMF
+
+### General problem
+* long time series data
+
+### Network
+* Train network with scale invariant to voltron signal
+
+### Issue in df/f computation
