@@ -42,6 +42,35 @@ def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=Fal
     np.save(fishName+'/imgDNoMotion', imgD_)
     return imgD_
 
+def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
+    from utils import getCameraInfo
+    from pixelwiseDenoising.simpleDenioseTool import simpleDN
+    from scipy.ndimage.filters import median_filter
+    from glob import glob
+
+    cameraInfo = getCameraInfo.getCameraInfo(folderName)
+    pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
+    pixel_x = (pixel_x0, pixel_x1)
+    pixel_y = (pixel_y0, pixel_y1)
+    imgFiles = sorted(glob(folderName+'TM*_CM*_CHN*.tif'))
+    imgStack = np.concatenate([io.imread(_) for _ in imgFiles], axis=0)
+    if plot_en:
+        plt.figure(figsize=(4, 3))
+        plt.imshow(imgStack[0], cmap='gray')
+        plt.savefig(fishName + '/Raw_frame_0.png')
+    offset = np.load(cameraNoiseMat +'/offset_mat.npy')
+    gain = np.load(cameraNoiseMat +'/gain_mat.npy')
+    offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+    gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+
+    ## simple denoise
+    imgD = simpleDN(imgStack, offset=offset_, gain=gain_)
+    ## smooth dead pixels
+    win_ = 3
+    imgD_ = median_filter(imgD, size=(1, win_, win_))
+    np.save(fishName+'/imgDNoMotion', imgD_)
+    return imgD_
+
 def regidStacks(move, fix=None, trans=None):
     if move.ndim < 3:
         move = move[np.newaxis, :]
