@@ -10,7 +10,12 @@ sns.set(font_scale=1.5)
 sns.set_style("ticks")
 import numpy as np
 import peakutils
+from statsmodels.robust.scale import mad
+from scipy.stats import norm as Gaussian
 
+
+def mad_scale(x, axis=0, c=Gaussian.ppf(3/4.)):
+    return (x-np.median(x, axis=axis))/mad(x, c=c, axis=axis, center=np.median)
 
 def plot_spks(plt, spkcount, ratio, label='Raw spike time'):
     spkTime = spkcount>0
@@ -27,6 +32,26 @@ def plot_test_performance(m, x_test, labels, plt=plt):
     plt.xlabel('Predition of spike probability')
     plt.ylabel('Counts')
     plt.legend()
+
+    
+def detected_window_max_spike(m, x_, voltr_, thres=0.4):
+    pred_x_test = m.predict(x_)
+    window_length = x_.shape[1]
+    spkInWindow = pred_x_test>thres
+    spkInWindow = spkInWindow.flatten()
+    spkInWindow[:window_length] = False
+    spkcount_ = np.zeros(voltr_.shape[0]).astype(np.bool)
+    for idx, nspk in enumerate(spkInWindow):
+        if nspk:
+            x__ = voltr_[idx:idx+window_length]
+            spk_idx = np.where(x__ == x__.max()).squeeze()[0]
+            spkcount_[idx+spk_idx] = True
+    # diff = voltr_set - devoltr_set
+    # diff_ = diff[spkcount_.astype(np.bool)]
+    # thres = np.percentile(diff_, 20)
+    # spk_diff = diff > thres
+    # spkcount__ = np.logical_and(spkcount_, spk_diff)
+    return spkcount_    
 
 def detected_max_spike(m, x_, voltr_, thres=0.4):
     pred_x_test = m.predict(x_)
