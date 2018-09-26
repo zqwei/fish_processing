@@ -2,12 +2,11 @@
 This is the data processing used for the calcium and voltage imaging
 
 ## Environment setup
-* Spark
-* Parallel processing -- Dask
 * Optional packages:
     * [Caiman](https://github.com/flatironinstitute/CaImAn) -- code for visualization, basic statistics such as SNR, local correlation etc.
     * [FunImag](https://github.com/paninski-lab/funimag) -- superpixel cell segmentation
     * [Trefide](https://github.com/ikinsella/trefide) -- trend filtering, total variational denoise
+    * [Fish](https://github.com/d-v-b/fish) -- basic analyses
     * Other packages required are shown https://github.com/zqwei/computer_setup
 
 ## Preprocessing of raw images -- Pixelwise denoising
@@ -38,6 +37,10 @@ https://github.com/zqwei/single_cell_zebrafish
 
 --------------------------
 ## TODO
+### Parallel processing
+* Spark
+* Parallel processing -- Dask
+
 ### Merge git repos
 * denoiseLocalPCA
 * zfish_osc
