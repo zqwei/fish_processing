@@ -36,17 +36,21 @@ This is the data processing used for the calcium and voltage imaging
 https://github.com/zqwei/single_cell_zebrafish
 
 --------------------------
+## Depreciated old repos
+If you are looking for / using one of the following repos, these are merged to independent folder in the current one, and they are no longer developed or supported.
+* denoiseLocalPCA
+* spike-detection-voltron
+* cmos-denoise
+* single-cell rna seq
+--------------------------
 ## TODO
 ### Parallel processing
 * Spark
 * Parallel processing -- Dask
 
 ### Merge git repos
-* denoiseLocalPCA
 * zfish_osc
-* spike-detection-voltron
-* cmos-denoise
-* single-cell rna seq
+
 
 ### Sparse PCA
 * Add prymid_tiles weight to fix squares in denoise movies
