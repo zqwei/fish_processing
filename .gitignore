@@ -1,5 +1,11 @@
 .smbdelete*
-
+*.ipynb
+*.rar
+*.npy
+*.h5
+*.png
+notebooks/
+tmp*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
