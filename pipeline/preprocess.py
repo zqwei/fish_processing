@@ -90,8 +90,9 @@ def motion_correction(imgD_, fix_, fishName):
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
     trans.ss_sigma_factor = 1.0
-    # imgStackMotion, imgStackMotionVar = parallel_to_chunks(regidStacks, imgStack, fix=fix, trans=trans)
+
     imgDMotion, imgDMotionVar = parallel_to_chunks(regidStacks, imgD_, fix=fix_, trans=trans)
+    # imgStackMotion, imgStackMotionVar = parallel_to_chunks(regidStacks, imgStack, fix=fix, trans=trans)
     # np.save('tmpData/imgStackMotion', imgStackMotion)
     # np.save('tmpData/imgStackMotionVar', imgStackMotionVar)
     np.save(fishName+'/imgDMotion', imgDMotion)
@@ -117,41 +118,3 @@ if __name__ == '__main__':
     if savefix_:
         np.save(fishName + '/motion_fix_', fix_)
     motion_correction(imgD_, fix_, fishName)
-
-    # imgStackMotion = np.load('tmpData/imgStackMotion.npy')
-    # imgDMotion = np.load('tmpData/imgDMotion.npy')
-    # imgStackMotionVar = np.load('tmpData/imgStackMotionVar.npy')
-    # imgDMotionVar = np.load('tmpData/imgDMotionVar.npy')
-    # crop_x = (65, 90)
-    # crop_y = (70, 100)
-    # mask = np.zeros(fix.shape)
-    # mask[crop_x[0]:crop_x[1], crop_y[0]:crop_y[1]] = 1
-    # cropRaw = imgStackMotion[:, mask==1]
-    # cropSDN = imgDMotion[:, mask==1]
-    # f, (ax1, ax2) = plt.subplots(1, 2)
-    # ax1.imshow(cropRaw[0].reshape(crop_x[1]-crop_x[0], crop_y[1]-crop_y[0]))
-    # ax1.set_title('Raw image')
-    # ax1.axis('off')
-    # ax2.imshow(cropSDN[0].reshape(crop_x[1]-crop_x[0], crop_y[1]-crop_y[0]))
-    # ax2.set_title('Denoised image')
-    # ax2.axis('off')
-    # plt.show()
-    #
-    # title = [r'$\theta$', 'x', 'y']
-    # f, ax = plt.subplots(1, 3, figsize = (25, 5))
-    # for nplot in range(3):
-    #     ax[nplot].plot(imgStackMotionVar[:, nplot]) # phase, x, y
-    #     ax[nplot].plot(imgDMotionVar[:, nplot])
-    #     ax[nplot].set_ylabel(r'$\Delta$ ' + title[nplot])
-    #     ax[nplot].set_xlabel('Frame')
-    # plt.show()
-    #
-    # dff_raw = compute_dff(cropRaw)
-    # dff_sdn = compute_dff(cropSDN)
-    #
-    # plt.plot(dff_raw, label='Raw data')
-    # plt.plot(dff_sdn, label='Denoised data', alpha=0.5)
-    # plt.ylabel('DF/F (pixel intensity)')
-    # plt.xlabel('Time (frame)')
-    # plt.legend()
-    # plt.show()
