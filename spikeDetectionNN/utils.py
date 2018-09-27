@@ -6,15 +6,12 @@ weiz@janelia.hhmi.org
 
 import numpy as np
 import deprecation
-from statsmodels.robust.scale import mad
-from scipy.stats import norm as Gaussian
-import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set(font_scale=1.5)
-sns.set_style("ticks")
 
 
-def mad_scale(x, axis=0, c=Gaussian.ppf(3/4.)):
+def mad_scale(x, axis=0, c=0.6745):
+    from statsmodels.robust.scale import mad
+    # from scipy.stats import norm as Gaussian
+    # c = Gaussian.ppf(3/4.)
     return (x-np.median(x, axis=axis))/mad(x, c=c, axis=axis, center=np.median)
 
 def plot_spks(plt, spkcount, ratio, label='Raw spike time'):
@@ -22,7 +19,8 @@ def plot_spks(plt, spkcount, ratio, label='Raw spike time'):
     plt.plot(np.array(np.where(spkTime)).T, spkcount[spkTime]*ratio,'o', label=label)
 
 
-def plot_test_performance(m, x_test, labels, plt=plt):
+def plot_test_performance(m, x_test, labels, plt):
+    import seaborn as sns
     pred_x_test = m.predict(x_test)
     labels = labels.astype(np.bool)
     sns.distplot(pred_x_test[labels], label='Spike')
