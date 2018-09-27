@@ -8,34 +8,35 @@ import os, sys
 fish_path = os.path.abspath(os.path.join('..'))
 if fish_path not in sys.path:
     sys.path.append(fish_path)
-
 import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set(font_scale=2)
-sns.set_style("white")
 
 def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=False):
     from utils import getCameraInfo
     from pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
+    from utils.memory import get_process_memory, clear_variables
 
     cameraInfo = getCameraInfo.getCameraInfo(folderName)
     pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
     pixel_x = (pixel_x0, pixel_x1)
     pixel_y = (pixel_y0, pixel_y1)
     imgFile = os.path.join(folderName, imgFileName)
-    imgStack = io.imread(imgFile)
+    imgStack = io.imread(imgFile).astype('float32')
     if plot_en:
         plt.figure(figsize=(4, 3))
         plt.imshow(imgStack[0], cmap='gray')
         plt.savefig(fishName + '/Raw_frame_0.png')
-    offset = np.load(cameraNoiseMat +'/offset_mat.npy')
-    gain = np.load(cameraNoiseMat +'/gain_mat.npy')
+    offset = np.load(cameraNoiseMat +'/offset_mat.npy').astype('float32')
+    gain = np.load(cameraNoiseMat +'/gain_mat.npy').astype('float32')
     offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
     gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
 
     ## simple denoise
     imgD = simpleDN(imgStack, offset=offset_, gain=gain_)
+
+    ## memory release ---
+    imgStack = None
+    clear_variables(imgStack)
     ## smooth dead pixels
     win_ = 3
     imgD_ = median_filter(imgD, size=(1, win_, win_))
@@ -53,13 +54,13 @@ def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
     pixel_x = (pixel_x0, pixel_x1)
     pixel_y = (pixel_y0, pixel_y1)
     imgFiles = sorted(glob(folderName+'TM*_CM*_CHN*.tif'))
-    imgStack = np.concatenate([io.imread(_) for _ in imgFiles], axis=0)
+    imgStack = np.concatenate([io.imread(_).astype('float32') for _ in imgFiles], axis=0).astype('float32')
     if plot_en:
         plt.figure(figsize=(4, 3))
         plt.imshow(imgStack[0], cmap='gray')
         plt.savefig(fishName + '/Raw_frame_0.png')
-    offset = np.load(cameraNoiseMat +'/offset_mat.npy')
-    gain = np.load(cameraNoiseMat +'/gain_mat.npy')
+    offset = np.load(cameraNoiseMat +'/offset_mat.npy').astype('float32')
+    gain = np.load(cameraNoiseMat +'/gain_mat.npy').astype('float32')
     offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
     gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
 
