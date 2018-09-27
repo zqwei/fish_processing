@@ -87,10 +87,14 @@ def regidStacks(move, fix=None, trans=None):
 def motion_correction(imgD_, fix_, fishName):
     from imageRegistration.imTrans import ImAffine
     from utils.np_mp import parallel_to_chunks
+    from utils.memory import get_process_memory, clear_variables
 
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
     trans.ss_sigma_factor = 1.0
+    
+    print('memory usage before processing -- ')
+    get_process_memory();
 
     imgDMotion, imgDMotionVar = parallel_to_chunks(regidStacks, imgD_, fix=fix_, trans=trans)
     # imgStackMotion, imgStackMotionVar = parallel_to_chunks(regidStacks, imgStack, fix=fix, trans=trans)
@@ -98,6 +102,14 @@ def motion_correction(imgD_, fix_, fishName):
     # np.save('tmpData/imgStackMotionVar', imgStackMotionVar)
     np.save(fishName+'/imgDMotion', imgDMotion)
     np.save(fishName+'/imgDMotionVar', imgDMotionVar)
+    
+    print('memory usage after processing -- ')
+    get_process_memory();
+    print('relase memory')
+    imgDMotion = None
+    imgDMotionVar = None
+    clear_variables((imgDMotion, imgDMotionVar))
+    
     return None
 
 def compute_dff(sig):
