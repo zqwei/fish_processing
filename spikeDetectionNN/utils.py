@@ -7,7 +7,6 @@ weiz@janelia.hhmi.org
 import numpy as np
 import deprecation
 
-
 def mad_scale(x, axis=0, c=0.6745):
     from statsmodels.robust.scale import mad
     # from scipy.stats import norm as Gaussian
