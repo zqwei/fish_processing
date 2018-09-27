@@ -3,6 +3,7 @@ OldNotebooks
 tmp*
 *.ipynb
 notebooks
+.smbdelete*
 
 # ignore all local data
 Data
