@@ -25,7 +25,7 @@ def mad_scale(x, axis=0, c=0.6745):
     # c = Gaussian.ppf(3/4.)
     return (x-np.median(x, axis=axis))/mad(x, c=c, axis=axis, center=np.median)
 
-def cluster_spikes(spkc, spkprob, voltr, spk=None, print_en=False, plot_en=False):
+def cluster_spikes(spkc, spkprob, voltr, spk=None, print_en=False, plot_en=False, normalized=True):
     from sklearn.cluster import DBSCAN
     from sklearn.preprocessing import StandardScaler
     import matplotlib.pyplot as plt
@@ -34,7 +34,8 @@ def cluster_spikes(spkc, spkprob, voltr, spk=None, print_en=False, plot_en=False
     spk2 = spkc.copy()
     data = np.vstack((voltr, spkprob)).T
     data = data[spkc==1, :]
-    data = StandardScaler().fit_transform(data)
+    if normalized:
+        data = StandardScaler().fit_transform(data)
     is_conv = False
     eps = 0.5
     
@@ -52,6 +53,12 @@ def cluster_spikes(spkc, spkprob, voltr, spk=None, print_en=False, plot_en=False
     if plot_en:
         for nlabel in range(-1, labels.max()+1):
             plt.scatter(data[labels==nlabel, 0], data[labels==nlabel, 1])
+        if normalized:
+            s_ = 'normalized '
+        else:
+            s_ = ''
+        plt.xlabel(s_+'voltr')
+        plt.ylabel(s_+'spike prob.')
         plt.show()
         
     if labels.max()==1:
