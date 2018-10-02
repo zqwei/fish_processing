@@ -2,8 +2,9 @@
 OldNotebooks
 tmp*
 *.ipynb
-notebooks
 .smbdelete*
+*tmp
+*.h5
 
 # ignore all local data
 Data

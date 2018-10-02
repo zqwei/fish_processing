@@ -2,18 +2,13 @@
 @author: modified by Ziqiang Wei, 08/30/2018
 """
 import numpy as np
-import h5py
-from skimage import io
-# import os, sys
-# fish_path = os.path.abspath(os.path.join('..'))
-# if fish_path not in sys.path:
-#     sys.path.append(fish_path)
 import matplotlib.pyplot as plt
 
 def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=False):
     from ..utils import getCameraInfo
     from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
+    from skimage import io
     from ..utils.memory import get_process_memory, clear_variables
 
     cameraInfo = getCameraInfo.getCameraInfo(folderName)
@@ -48,6 +43,7 @@ def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
     from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
     from glob import glob
+    from skimage import io
 
     cameraInfo = getCameraInfo.getCameraInfo(folderName)
     pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
