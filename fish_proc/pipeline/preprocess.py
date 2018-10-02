@@ -80,7 +80,7 @@ def regidStacks(move, fix=None, trans=None):
         move_list.append([trans_mat[0, 1]/trans_mat[0, 0], trans_mat[0, 2], trans_mat[1, 2]])
     return trans_move, move_list
 
-def motion_correction(imgD_, fix_, fishName):
+def motion_correction(imgD_, fix_, fishName, ext=''):
     from ..imageRegistration.imTrans import ImAffine
     from ..utils.np_mp import parallel_to_chunks
     from ..utils.memory import get_process_memory, clear_variables
@@ -96,8 +96,8 @@ def motion_correction(imgD_, fix_, fishName):
     # imgStackMotion, imgStackMotionVar = parallel_to_chunks(regidStacks, imgStack, fix=fix, trans=trans)
     # np.save('tmpData/imgStackMotion', imgStackMotion)
     # np.save('tmpData/imgStackMotionVar', imgStackMotionVar)
-    np.save(fishName+'/imgDMotion', imgDMotion)
-    np.save(fishName+'/imgDMotionVar', imgDMotionVar)
+    np.save(fishName+'/imgDMotion%s'%(ext), imgDMotion)
+    np.save(fishName+'/imgDMotionVar%s'%(ext), imgDMotionVar)
 
     print('memory usage after processing -- ')
     get_process_memory();
