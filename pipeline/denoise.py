@@ -1,12 +1,12 @@
 import numpy as np
-import os, sys
-fish_path = os.path.abspath(os.path.join('..'))
-if fish_path not in sys.path:
-    sys.path.append(fish_path)
+# import os, sys
+# fish_path = os.path.abspath(os.path.join('..'))
+# if fish_path not in sys.path:
+#     sys.path.append(fish_path)
 
 def detrend(Y_, fishName, n_split = 32):
-    from denoiseLocalPCA.detrend import trend
-    from utils.np_mp import parallel_to_chunks
+    from ..denoiseLocalPCA.detrend import trend
+    from ..utils.np_mp import parallel_to_chunks
     Y_split = np.split(Y_, n_split, axis=0)
     Y_trend = parallel_to_chunks(trend, Y_split)
     Y_trend = Y_trend[0]
@@ -18,7 +18,7 @@ def detrend(Y_, fishName, n_split = 32):
     return None
 
 def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0):
-    from denoiseLocalPCA.denoise import temporal as svd_patch
+    from ..denoiseLocalPCA.denoise import temporal as svd_patch
     Y_d_ave = Y_d.mean(axis=-1, keepdims=True) # remove mean
     Y_d_std = Y_d.std(axis=-1, keepdims=True) # normalization
     Y_d = (Y_d - Y_d_ave)/Y_d_std

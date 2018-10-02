@@ -3,3 +3,8 @@ scipy
 matplotlib
 dipy
 skimage
+keras
+tensorflow
+deprecation
+multiprocessing
+glob

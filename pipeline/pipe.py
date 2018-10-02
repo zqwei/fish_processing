@@ -1,5 +1,5 @@
-from preprocess import pixel_denoise, motion_correction
-from denoise import denose_2dsvd, detrend
+from .preprocess import pixel_denoise, motion_correction
+from .denoise import denose_2dsvd, detrend
 from ..utils.memory import get_process_memory, clear_variables
 
 class pipe:

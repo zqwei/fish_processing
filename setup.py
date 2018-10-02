@@ -5,6 +5,6 @@ setup(name='fish_proc',
       description='Utilities for analyzing imaging and behavioral data from zebrafish',
       author='Ziqiang Wei',
       author_email='weiz@janelia.hhmi.org',
-      packages=['fish_proc'],
+      packages=['fish_processing'],
       url='https://github.com/zqwei/fish_processing',
       zip_safe=False)

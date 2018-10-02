@@ -4,17 +4,17 @@
 import numpy as np
 import h5py
 from skimage import io
-import os, sys
-fish_path = os.path.abspath(os.path.join('..'))
-if fish_path not in sys.path:
-    sys.path.append(fish_path)
+# import os, sys
+# fish_path = os.path.abspath(os.path.join('..'))
+# if fish_path not in sys.path:
+#     sys.path.append(fish_path)
 import matplotlib.pyplot as plt
 
 def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=False):
-    from utils import getCameraInfo
-    from pixelwiseDenoising.simpleDenioseTool import simpleDN
+    from ..utils import getCameraInfo
+    from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
-    from utils.memory import get_process_memory, clear_variables
+    from ..utils.memory import get_process_memory, clear_variables
 
     cameraInfo = getCameraInfo.getCameraInfo(folderName)
     pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
@@ -44,8 +44,8 @@ def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=Fal
     return imgD_
 
 def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
-    from utils import getCameraInfo
-    from pixelwiseDenoising.simpleDenioseTool import simpleDN
+    from ..utils import getCameraInfo
+    from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
     from glob import glob
 
@@ -85,9 +85,9 @@ def regidStacks(move, fix=None, trans=None):
     return trans_move, move_list
 
 def motion_correction(imgD_, fix_, fishName):
-    from imageRegistration.imTrans import ImAffine
-    from utils.np_mp import parallel_to_chunks
-    from utils.memory import get_process_memory, clear_variables
+    from ..imageRegistration.imTrans import ImAffine
+    from ..utils.np_mp import parallel_to_chunks
+    from ..utils.memory import get_process_memory, clear_variables
 
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
