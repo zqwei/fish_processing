@@ -15,8 +15,8 @@ spark-janelia-lsf start -b
 """
 
 # following is run while at server
-import pathlib as pl
-import thunder as td
+# import pathlib as pl
+# import thunder as td
 from glob import glob
 
 
