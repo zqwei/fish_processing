@@ -5,6 +5,7 @@ tmp*
 .smbdelete*
 *tmp
 *.h5
+*Data*
 
 # ignore all local data
 Data
