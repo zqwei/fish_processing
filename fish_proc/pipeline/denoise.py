@@ -31,6 +31,7 @@ def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0)
     Y_d_ave = Y_d.mean(axis=-1, keepdims=True) # remove mean
     Y_d_std = Y_d.std(axis=-1, keepdims=True) # normalization
     Y_d = (Y_d - Y_d_ave)/Y_d_std
+    Y_d = Y_d.astype('float32')
     np.savez(f'{fishName}/Y_2dnorm', Y_d_ave=Y_d_ave, Y_d_std=Y_d_std)
     Y_d_ave = None
     Y_d_std = None

@@ -6,6 +6,7 @@ from . import greedyPCA as gpca
 from math import ceil
 from functools import partial
 from itertools import product
+from ..utils.memory import get_process_memory, clear_variables
 
 def block_split_size(l,n):
     """
@@ -207,7 +208,11 @@ def denoise_dx_tiles(W,
     dW_ = combine_blocks(dims,dW_,list_order='C')
     if dx ==1:
         return dW_, rank_W_
+    W_ = None
     del W_
+    dW_ = dW_.astype('float32')
+    get_process_memory();
+    
     W_rs, drs = offset_tiling(W,
                              nblocks=nblocks,
                              offset_case='r')
@@ -220,7 +225,12 @@ def denoise_dx_tiles(W,
                                  min_rank=min_rank)
     dims_rs = list(map(np.shape,dW_rs))
     dW_rs = combine_blocks(drs,dW_rs,list_order='C')
+    
+    W_rs = None
     del W_rs
+    dW_rs = dW_rs.astype('float32')
+    get_process_memory();
+    
     W_cs, dcs = offset_tiling(W,
                      nblocks=nblocks,
                      offset_case='c')
@@ -233,7 +243,12 @@ def denoise_dx_tiles(W,
                                  min_rank=min_rank)
     dims_cs = list(map(np.shape,dW_cs))
     dW_cs = combine_blocks(dcs,dW_cs,list_order='C')
+    
+    W_cs = None
     del W_cs
+    dW_cs = dW_cs.astype('float32')
+    get_process_memory();
+    
     W_rcs, drcs = offset_tiling(W,
                       nblocks=nblocks,
                       offset_case='rc')
@@ -246,7 +261,12 @@ def denoise_dx_tiles(W,
                              min_rank=min_rank)
     dims_rcs = list(map(np.shape,dW_rcs))
     dW_rcs = combine_blocks(drcs,dW_rcs,list_order='C')
+
+    W_rcs = None
     del W_rcs
+    dW_rcs = dW_rcs.astype('float32')
+    get_process_memory();
+    
     if False:
         return nblocks, dW_, dW_rs, dW_cs, dW_rcs, dims_, dims_rs, dims_cs, dims_rcs
     W_four = combine_4xd(nblocks,
@@ -272,9 +292,9 @@ def combine_4xd(nblocks,dW_,dW_rs,dW_cs,dW_rcs,dims_,dims_rs,dims_cs,dims_rcs,pl
     dcs     =   dW_cs.shape
     drcs    =   dW_rcs.shape
     # Get pyramid functions for each grid
-    ak1 = np.zeros(dims[:2])
-    ak2 = np.zeros(dims[:2])
-    ak3 = np.zeros(dims[:2])
+    ak1 = np.zeros(dims[:2]).astype('float32')
+    ak2 = np.zeros(dims[:2]).astype('float32')
+    ak3 = np.zeros(dims[:2]).astype('float32')
     ak0 = pyramid_tiles(dims, dims_, list_order='C')
     ak1[r1:r2,:] = pyramid_tiles(drs, dims_rs, list_order='C')
     ak2[:,c1:c2] = pyramid_tiles(dcs, dims_cs, list_order='C')
@@ -285,9 +305,9 @@ def combine_4xd(nblocks,dW_,dW_rs,dW_cs,dW_rcs,dims_,dims_rs,dims_cs,dims_rcs,pl
     #return ak0,ak1,ak2,ak3,patches,W_rs,W_cs,W_rcs
     if False:
         return ak0,ak1,ak2,ak3
-    W1 = np.zeros(dims)
-    W2 = np.zeros(dims)
-    W3 = np.zeros(dims)
+    W1 = np.zeros(dims).astype('float32')
+    W2 = np.zeros(dims).astype('float32')
+    W3 = np.zeros(dims).astype('float32')
     W1[r1:r2,:,:] = dW_rs
     W2[:,c1:c2,:] = dW_cs
     W3[r1:r2,c1:c2,:] = dW_rcs
@@ -334,10 +354,14 @@ def run_single(Y,
             rank or final number of components stored for each movie.
     ------
     """
-    cpu_count = multiprocessing.cpu_count()
+    get_process_memory();
+    cpu_count = multiprocessing.cpu_count()//3*2
     start=time.time()
     pool = multiprocessing.Pool(cpu_count)
-    args=[[patch] for patch in Y]
+    args=[[patch] for patch in Y.astype('float32')]
+    Y = None
+    clear_variables(Y)
+    get_process_memory();
     # define params in function
     c_outs = pool.starmap(partial(gpca.denoise_patch,
                                   maxlag=maxlag,
@@ -353,9 +377,12 @@ def run_single(Y,
     pool.close()
     pool.join()
     print('Total run time: %f'%(time.time()-start))
-    Yds = [out_[0] for out_ in c_outs]
+    Yds = [out_[0].astype('float32') for out_ in c_outs]
     vtids = [out_[1] for out_ in c_outs]
     vtids = np.asarray(vtids).astype('int')
+    c_outs = None
+    clear_variables(c_outs)
+    get_process_memory();
     return Yds,vtids
 
 
@@ -394,7 +421,7 @@ def pyramid_matrix(dims,plot_en=False):
         plt.yticks(np.arange(dims[0]))
         plt.colorbar()
         plt.show()
-    return a_k
+    return a_k.astype('float32')
 
 
 def pyramid_tiles(dims_rs,dims_,list_order='C',plot_en=False):

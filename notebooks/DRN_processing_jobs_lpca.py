@@ -185,7 +185,7 @@ if __name__ == '__main__':
     if len(sys.argv)>1:
         eval(sys.argv[1]+"()")
     else:
-        video_detrend()
+        local_pca()
     
     # update_table(update_ods = False)
     # swim()
