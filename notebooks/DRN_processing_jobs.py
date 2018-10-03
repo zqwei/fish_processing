@@ -88,7 +88,7 @@ def pixel_denoise():
     return None
 
 
-def registration():
+def registration(is_largefile=False):
     from pathlib import Path
     from fish_proc.pipeline.preprocess import motion_correction
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
@@ -108,13 +108,56 @@ def registration():
                 print(f'process file {folder}/{fish}')
                 imgD_ = np.load(save_folder+'/imgDNoMotion.npy').astype('float32')
                 fix_ = np.load(save_folder + '/motion_fix_.npy').astype('float32')
-                motion_correction(imgD_, fix_, save_folder)
-                get_process_memory();
+                if is_largefile:
+                    len_D_ = len(imgD_)//2
+                    motion_correction(imgD_[:len_D_], fix_, save_folder, ext='0')
+                    get_process_memory();
+                    motion_correction(imgD_[len_D_:], fix_, save_folder, ext='1')
+                    get_process_memory();
+                else:
+                    motion_correction(imgD_, fix_, save_folder)
+                    get_process_memory();
                 imgD_ = None
                 fix_ = None
                 clear_variables((imgD_, fix_))
                 Path(save_folder+'/finished_registr.tmp').touch()
     return None
 
+def video_detrend():
+    from fish_proc.pipeline.denoise import detrend
+    from pathlib import Path
+    
+    dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
+    for index, row in dat_xls_file.iterrows():
+        folder = row['folder']
+        fish = row['fish']
+        image_folder = f'/nrs/ahrens/Takashi/0{folder}/{fish}/'
+        save_folder = dat_folder + f'{folder}/{fish}/Data'
+        print(f'checking file {folder}/{fish}')
+        if not os.path.isfile(save_folder+'/Y_d.npy') and not os.path.isfile(save_folder+'/proc_detrend.tmp'):
+            if os.path.isfile(save_folder+'/imgDMotionVar.npy') or os.path.isfile(save_folder+'/Data/finished_registr.tmp'):
+                Path(save_folder+'/proc_detrend.tmp').touch()
+                if not os.path.isfile(save_folder+'/imgDMotionVar.npy'):
+                    Y1 = np.load(save_folder+'/imgDMotion0.npy').astype('float32')
+                    Y2 = np.load(save_folder+'/imgDMotion1.npy').astype('float32')
+                    Y = np.concatenate((Y1, Y2), axis=0)
+                    Y1 = None
+                    Y2 = None
+                    clear_variables((Y1, Y2))
+                else:
+                    Y = np.load(save_folder+'/imgDMotion.npy').astype('float32')
+                Y = Y.transpose([1,2,0])
+                detrend(Y, save_folder, n_split=4)
+                Y = None
+                clear_variables(Y)
+                get_process_memory();
+                Path(save_folder+'/finished_detrend.tmp').touch()
+    return None
+
 if __name__ == '__main__':
-    registration()
+    # update_table(update_ods = False)
+    # swim()
+    # pixel_denoise()
+    # registration()
+    video_detrend()
+    
