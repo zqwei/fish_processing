@@ -1,20 +1,27 @@
 import numpy as np
-# import os, sys
-# fish_path = os.path.abspath(os.path.join('..'))
-# if fish_path not in sys.path:
-#     sys.path.append(fish_path)
 
-def detrend(Y_, fishName, n_split = 32):
+def detrend(Y_, fishName, n_split = 1):
     from ..denoiseLocalPCA.detrend import trend
     from ..utils.np_mp import parallel_to_chunks
-    Y_split = np.split(Y_, n_split, axis=0)
-    Y_trend = parallel_to_chunks(trend, Y_split)
-    Y_trend = Y_trend[0]
-    Y_trend_ = tuple([_ for _ in Y_trend])
-    Y_trend_ = np.concatenate(Y_trend_, axis=0)
-    Y_d = Y_ - Y_trend_
+    from ..utils.memory import get_process_memory, clear_variables
+    
+    Y_trend = []
+    for Y_split in np.array_split(Y_, n_split, axis=0):
+        Y_trend.append(parallel_to_chunks(trend, Y_split)[0])
+    
+    # Y_trend = parallel_to_chunks(trend, Y_split)
+    # Y_trend = Y_trend[0]
+    # Y_trend_ = tuple([_ for _ in Y_trend])
+    # Y_trend_ = np.concatenate(Y_trend_, axis=0)
+    Y_trend = np.concatenate(Y_trend, axis=0)
+    Y_d = Y_ - Y_trend
     np.save(f'{fishName}/Y_d', Y_d)
-    np.save(f'{fishName}/Y_trend', Y_trend_)
+    np.save(f'{fishName}/Y_trend', Y_trend)
+    Y_d = None
+    Y_split = None
+    Y_trend = None
+    clear_variables((Y_d, Y_split, Y_, Y_trend))
+    get_process_memory();
     return None
 
 def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0):

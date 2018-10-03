@@ -15,7 +15,6 @@ def parallel_to_chunks(func1d, arr, *args, **kwargs):
 
     chunks = [(func1d, sub_arr, args, kwargs)
               for sub_arr in np.array_split(arr, mp.cpu_count())]
-
     pool = mp.Pool()
     individual_results = pool.map(unpacking_apply_func, chunks)
     # Freeing the workers:
