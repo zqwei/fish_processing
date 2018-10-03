@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import os
+import os, sys
 from fish_proc.utils.memory import get_process_memory, clear_variables
 
 dat_folder = '/nrs/ahrens/Ziqiang/Takashi_DRN_project/'
@@ -16,25 +16,27 @@ def update_table(update_ods = False):
     return None
 
 def monitor_process():
-    # from subprocess import Popen, PIPE
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
-    if 'index' in dat_xls_file.columns:
-        dat_xls_file = dat_xls_file.drop('index', axis=1)
-    dat_xls_file['folder'] = dat_xls_file['folder'].astype(int).apply(str)
-
     for index, row in dat_xls_file.iterrows():
         # check swim:
         folder = row['folder']
         fish = row['fish']
-        save_folder = dat_folder + f'{folder}/{fish}/'
+        save_folder = dat_folder + f'{folder}/{fish}/'        
         if os.path.exists(save_folder+'/swim'):
             dat_xls_file.at[index, 'swim'] = True
-        if os.path.exists(save_folder + '/Data/motion_fix_.npy'):
-            dat_xls_file.at[index, 'pixeldenoise'] = True
-        if os.path.exists(save_folder+'/Data/imgDMotionVar.npy'):
+        if os.path.isfile(save_folder + '/Data/motion_fix_.npy'):
+            dat_xls_file.at[index, 'pixeldenoise'] = True    
+        if os.path.isfile(save_folder+'/Data/finished_registr.tmp'):
             dat_xls_file.at[index, 'registration'] = True
+        if os.path.isfile(save_folder+'/Data/finished_detrend.tmp'):
+            dat_xls_file.at[index, 'detrend'] = True
+        if os.path.isfile(save_folder+'/Data/finished_local_denoise.tmp'):
+            dat_xls_file.at[index, 'localdenoise'] = True
+        if os.path.isfile(save_folder+'/Data/finished_demix.tmp'):
+            dat_xls_file.at[index, 'demix'] = True
     print(dat_xls_file.sum(numeric_only=True))
-    dat_xls_file.to_csv(dat_folder + 'Voltron Log_DRN_Exp.csv')
+    print(dat_xls_file[dat_xls_file['registration']==False])
+    dat_xls_file.to_csv(dat_folder + 'Voltron Log_DRN_Exp.csv') 
     return None
 
 def swim():
@@ -155,9 +157,13 @@ def video_detrend():
     return None
 
 if __name__ == '__main__':
+    if len(sys.argv)>1:
+        eval(sys.argv[1]+"()")
+    else:
+        video_detrend()
+    
     # update_table(update_ods = False)
     # swim()
     # pixel_denoise()
     # registration()
-    video_detrend()
-    
+    # video_detrend()
