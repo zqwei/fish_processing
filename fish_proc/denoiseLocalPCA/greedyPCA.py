@@ -515,7 +515,7 @@ def greedy_spatial_denoiser(Y,
         #outs_2 = update_U_parallel(Y,V_TF,fudge_factor)
         U_hat, nus_ = map(np.asarray,zip(*np.asarray(outs_2)))
     else:
-        nus_= np.zeros((V_TF.shape[0]))
+        nus_= np.zeros((V_TF.shape[0])).astype('float32')
         U_hat = np.matmul(Y, np.matmul(V_TF.T, np.linalg.inv(np.matmul(V_TF, V_TF.T))))
     return U_hat, nus_
 

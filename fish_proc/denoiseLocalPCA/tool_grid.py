@@ -335,7 +335,6 @@ def run_single(Y,
     ------
     """
     cpu_count = multiprocessing.cpu_count()
-    cpu_count = max(cpu_count-3, 1)
     start=time.time()
     pool = multiprocessing.Pool(cpu_count)
     args=[[patch] for patch in Y]
@@ -374,7 +373,7 @@ def pyramid_matrix(dims,plot_en=False):
                  where 0 indicates the boundary
                  and 1 the center.
     """
-    a_k = np.zeros(dims[:2])
+    a_k = np.zeros(dims[:2]).astype('float32')
     xc, yc = ceil(dims[0]/2),ceil(dims[1]/2)
     for ii in range(xc):
         for jj in range(yc):
