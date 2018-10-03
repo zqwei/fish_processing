@@ -24,11 +24,11 @@ def monitor_process():
         # check swim:
         folder = row['folder']
         fish = row['fish']
-        save_folder = dat_folder + f'{folder}/{fish}/'        
+        save_folder = dat_folder + f'{folder}/{fish}/'
         if os.path.exists(save_folder+'/swim'):
             dat_xls_file.at[index, 'swim'] = True
         if os.path.isfile(save_folder + '/Data/motion_fix_.npy'):
-            dat_xls_file.at[index, 'pixeldenoise'] = True    
+            dat_xls_file.at[index, 'pixeldenoise'] = True
         if os.path.isfile(save_folder+'/Data/finished_registr.tmp'):
             dat_xls_file.at[index, 'registration'] = True
         if os.path.isfile(save_folder+'/Data/finished_detrend.tmp'):
@@ -39,7 +39,7 @@ def monitor_process():
             dat_xls_file.at[index, 'demix'] = True
     print(dat_xls_file.sum(numeric_only=True))
     # print(dat_xls_file[dat_xls_file['registration']==False])
-    dat_xls_file.to_csv(dat_folder + 'Voltron Log_DRN_Exp.csv') 
+    dat_xls_file.to_csv(dat_folder + 'Voltron Log_DRN_Exp.csv')
     return None
 
 def swim():
@@ -131,7 +131,8 @@ def registration(is_largefile=False):
 def video_detrend():
     from fish_proc.pipeline.denoise import detrend
     from pathlib import Path
-    
+    from multiprocessing import cpu_count
+
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
     for index, row in dat_xls_file.iterrows():
         folder = row['folder']
@@ -152,7 +153,12 @@ def video_detrend():
                 else:
                     Y = np.load(save_folder+'/imgDMotion.npy').astype('float32')
                 Y = Y.transpose([1,2,0])
-                detrend(Y, save_folder, n_split=4)
+                n_split = min(Y.shape[0]//cpu_count(), 4)
+                if n_split == 0:
+                    n_split = 1
+
+                detrend(Y, save_folder, n_split=n_split)
+
                 Y = None
                 clear_variables(Y)
                 get_process_memory();
@@ -162,7 +168,7 @@ def video_detrend():
 def local_pca():
     from fish_proc.pipeline.denoise import denose_2dsvd
     from pathlib import Path
-    
+
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
     for index, row in dat_xls_file.iterrows():
         folder = row['folder']
@@ -178,7 +184,7 @@ def local_pca():
                 Y_d = None
                 clear_variables(Y_d)
                 get_process_memory();
-                Path(save_folder+'/finished_local_denoise.tmp').touch()        
+                Path(save_folder+'/finished_local_denoise.tmp').touch()
     return None
 
 if __name__ == '__main__':
@@ -186,7 +192,7 @@ if __name__ == '__main__':
         eval(sys.argv[1]+"()")
     else:
         video_detrend()
-    
+
     # update_table(update_ods = False)
     # swim()
     # pixel_denoise()

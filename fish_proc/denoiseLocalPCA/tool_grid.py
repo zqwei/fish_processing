@@ -212,7 +212,7 @@ def denoise_dx_tiles(W,
     del W_
     dW_ = dW_.astype('float32')
     get_process_memory();
-    
+
     W_rs, drs = offset_tiling(W,
                              nblocks=nblocks,
                              offset_case='r')
@@ -225,12 +225,12 @@ def denoise_dx_tiles(W,
                                  min_rank=min_rank)
     dims_rs = list(map(np.shape,dW_rs))
     dW_rs = combine_blocks(drs,dW_rs,list_order='C')
-    
+
     W_rs = None
     del W_rs
     dW_rs = dW_rs.astype('float32')
     get_process_memory();
-    
+
     W_cs, dcs = offset_tiling(W,
                      nblocks=nblocks,
                      offset_case='c')
@@ -243,12 +243,12 @@ def denoise_dx_tiles(W,
                                  min_rank=min_rank)
     dims_cs = list(map(np.shape,dW_cs))
     dW_cs = combine_blocks(dcs,dW_cs,list_order='C')
-    
+
     W_cs = None
     del W_cs
     dW_cs = dW_cs.astype('float32')
     get_process_memory();
-    
+
     W_rcs, drcs = offset_tiling(W,
                       nblocks=nblocks,
                       offset_case='rc')
@@ -266,7 +266,7 @@ def denoise_dx_tiles(W,
     del W_rcs
     dW_rcs = dW_rcs.astype('float32')
     get_process_memory();
-    
+
     if False:
         return nblocks, dW_, dW_rs, dW_cs, dW_rcs, dims_, dims_rs, dims_cs, dims_rcs
     W_four = combine_4xd(nblocks,
@@ -358,7 +358,7 @@ def run_single(Y,
     cpu_count = multiprocessing.cpu_count()//3*2
     start=time.time()
     pool = multiprocessing.Pool(cpu_count)
-    args=[[patch] for patch in Y.astype('float32')]
+    args=[[patch] for patch in Y]
     Y = None
     clear_variables(Y)
     get_process_memory();
