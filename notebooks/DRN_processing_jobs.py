@@ -141,9 +141,10 @@ def video_detrend():
         save_folder = dat_folder + f'{folder}/{fish}/Data'
         print(f'checking file {folder}/{fish}')
         if not os.path.isfile(save_folder+'/Y_d.npy') and not os.path.isfile(save_folder+'/proc_detrend.tmp'):
-            if os.path.isfile(save_folder+'/imgDMotionVar.npy') or os.path.isfile(save_folder+'/Data/finished_registr.tmp'):
+            if os.path.isfile(save_folder+'/finished_registr.tmp'):
                 Path(save_folder+'/proc_detrend.tmp').touch()
                 if not os.path.isfile(save_folder+'/imgDMotionVar.npy'):
+                    print(save_folder)
                     Y1 = np.load(save_folder+'/imgDMotion0.npy').astype('float32')
                     Y2 = np.load(save_folder+'/imgDMotion1.npy').astype('float32')
                     Y = np.concatenate((Y1, Y2), axis=0)
