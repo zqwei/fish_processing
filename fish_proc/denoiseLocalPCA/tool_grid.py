@@ -377,7 +377,7 @@ def run_single(Y,
     pool.close()
     pool.join()
     print('Total run time: %f'%(time.time()-start))
-    Yds = [out_[0].astype('float32') for out_ in c_outs]
+    Yds = [out_[0] for out_ in c_outs]
     vtids = [out_[1] for out_ in c_outs]
     vtids = np.asarray(vtids).astype('int')
     c_outs = None
