@@ -40,6 +40,8 @@ def monitor_process():
     print(dat_xls_file.sum(numeric_only=True))
     # print(dat_xls_file[dat_xls_file['registration']==False])
     dat_xls_file.to_csv(dat_folder + 'Voltron Log_DRN_Exp.csv')
+    # save a local copy
+    dat_xls_file.to_csv('Voltron Log_DRN_Exp.csv')
     return None
 
 def swim():

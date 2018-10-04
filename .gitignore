@@ -6,6 +6,7 @@ tmp*
 *tmp
 *.h5
 *Data*
+*.csv
 
 # ignore all local data
 Data
