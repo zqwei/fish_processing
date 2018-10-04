@@ -154,11 +154,20 @@ def video_detrend():
                 else:
                     Y = np.load(save_folder+'/imgDMotion.npy').astype('float32')
                 Y = Y.transpose([1,2,0])
-                n_split = min(Y.shape[0]//cpu_count(), 4)
-                if n_split == 0:
-                    n_split = 1
-
-                detrend(Y, save_folder, n_split=n_split)
+                
+                # n_split = min(Y.shape[0]//cpu_count(), 4)
+                # if n_split <= 1:
+                #     n_split = 1
+                # detrend(Y, save_folder, n_split=n_split)
+                
+                # this is only for large data
+                n_split = min(Y.shape[0]//cpu_count(), 8)
+                if n_split <= 1:
+                    n_split = 2
+                
+                Y_len = Y.shape[0]//2
+                detrend(Y[:Y_len, :, :], save_folder, n_split=n_split//2, ext='0')
+                detrend(Y[Y_len:, :, :], save_folder, n_split=n_split//2, ext='1')
 
                 Y = None
                 clear_variables(Y)

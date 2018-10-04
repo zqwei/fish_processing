@@ -355,7 +355,7 @@ def run_single(Y,
     ------
     """
     get_process_memory();
-    cpu_count = multiprocessing.cpu_count()//3*2
+    cpu_count = multiprocessing.cpu_count()
     start=time.time()
     pool = multiprocessing.Pool(cpu_count)
     args=[[patch] for patch in Y]
