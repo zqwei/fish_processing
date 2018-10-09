@@ -3,13 +3,15 @@
 """
 import numpy as np
 import matplotlib.pyplot as plt
+from skimage.io import imsave
 
 def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=False):
     from ..utils import getCameraInfo
     from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
     from skimage import io
-    from ..utils.memory import get_process_memory, clear_variables
+    from ..utils.memory import clear_variables
+    import os
 
     cameraInfo = getCameraInfo.getCameraInfo(folderName)
     pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
@@ -25,17 +27,16 @@ def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=Fal
     gain = np.load(cameraNoiseMat +'/gain_mat.npy').astype('float32')
     offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
     gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
-
     ## simple denoise
     imgD = simpleDN(imgStack, offset=offset_, gain=gain_)
-
     ## memory release ---
     imgStack = None
     clear_variables(imgStack)
     ## smooth dead pixels
     win_ = 3
     imgD_ = median_filter(imgD, size=(1, win_, win_))
-    np.save(fishName+'/imgDNoMotion', imgD_)
+    # np.save(fishName+'/imgDNoMotion', imgD_)
+    imsave(fishName+'/imgDNoMotion.tif', imgD_, compress=1)
     return imgD_
 
 def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
@@ -65,7 +66,8 @@ def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
     ## smooth dead pixels
     win_ = 3
     imgD_ = median_filter(imgD, size=(1, win_, win_))
-    np.save(fishName+'/imgDNoMotion', imgD_)
+    # np.save(fishName+'/imgDNoMotion', imgD_)
+    imsave(fishName+'/imgDNoMotion.tif', imgD_, compress=1)
     return imgD_
 
 def regidStacks(move, fix=None, trans=None):
@@ -88,24 +90,20 @@ def motion_correction(imgD_, fix_, fishName, ext=''):
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
     trans.ss_sigma_factor = 1.0
-
     print('memory usage before processing -- ')
     get_process_memory();
-
     imgDMotion, imgDMotionVar = parallel_to_chunks(regidStacks, imgD_, fix=fix_, trans=trans)
     # imgStackMotion, imgStackMotionVar = parallel_to_chunks(regidStacks, imgStack, fix=fix, trans=trans)
     # np.save('tmpData/imgStackMotion', imgStackMotion)
     # np.save('tmpData/imgStackMotionVar', imgStackMotionVar)
     np.save(fishName+'/imgDMotion%s'%(ext), imgDMotion)
     np.save(fishName+'/imgDMotionVar%s'%(ext), imgDMotionVar)
-
     print('memory usage after processing -- ')
     get_process_memory();
     print('relase memory')
     imgDMotion = None
     imgDMotionVar = None
     clear_variables((imgDMotion, imgDMotionVar))
-
     return None
 
 def compute_dff(sig):
