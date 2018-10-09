@@ -6,6 +6,7 @@ from fish_proc.utils.memory import get_process_memory, clear_variables
 dat_folder = '/nrs/ahrens/Ziqiang/Takashi_DRN_project/'
 cameraNoiseMat = '/groups/ahrens/ahrenslab/Ziqiang/gainMat/gainMat20180208'
 
+
 def update_table(update_ods = False):
     if update_ods:
         dat_xls_file = pd.read_excel(dat_folder+'Voltron Log_DRN_Exp.xlsx')
@@ -14,6 +15,7 @@ def update_table(update_ods = False):
         dat_xls_file['finished'] = False
         dat_xls_file.to_csv(dat_folder + 'Voltron Log_DRN_Exp.csv')
     return None
+
 
 def monitor_process():
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
@@ -47,10 +49,9 @@ def monitor_process():
 def swim():
     from fish_proc.utils.ep import process_swim
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
-    for index, row in dat_xls_file.iterrows():
+    for _, row in dat_xls_file.iterrows():
         folder = row['folder']
         fish = row['fish']
-        image_folder = f'/nrs/ahrens/Takashi/0{folder}/{fish}/'
         swim_chFit = f'/nrs/ahrens/Takashi/0{folder}/{fish}.10chFlt'
         save_folder = dat_folder + f'{folder}/{fish}/'
         if not os.path.exists(save_folder):
@@ -62,10 +63,11 @@ def swim():
                 print(f'Check existence of file {swim_chFit}')
     return None
 
+
 def pixel_denoise():
     from fish_proc.pipeline.preprocess import pixel_denoise, pixel_denoise_img_seq
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
-    for index, row in dat_xls_file.iterrows():
+    for _, row in dat_xls_file.iterrows():
         folder = row['folder']
         fish = row['fish']
         image_folder = f'/nrs/ahrens/Takashi/0{folder}/{fish}/'
@@ -75,6 +77,8 @@ def pixel_denoise():
             print(f'checking file {folder}/{fish}')
             if not os.path.exists(save_folder+'/'):
                 os.makedirs(save_folder)
+            if os.path.exists(save_folder + 'imgDNoMotion.tif'):
+                continue
             if not os.path.isfile(save_folder + '/motion_fix_.npy'):
                 print(f'process file {folder}/{fish}')
                 try:
@@ -95,25 +99,25 @@ def pixel_denoise():
     return None
 
 
-def registration(is_largefile=False):
+def registration(is_largefile=True):
     from pathlib import Path
     from fish_proc.pipeline.preprocess import motion_correction
+    from skimage.io import imread, imsave
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
     if 'index' in dat_xls_file.columns:
         dat_xls_file = dat_xls_file.drop('index', axis=1)
     dat_xls_file['folder'] = dat_xls_file['folder'].astype(int).apply(str)
 
-    for index, row in dat_xls_file.iterrows():
+    for _, row in dat_xls_file.iterrows():
         folder = row['folder']
         fish = row['fish']
-        image_folder = f'/nrs/ahrens/Takashi/0{folder}/{fish}/'
         save_folder = dat_folder + f'{folder}/{fish}/Data'
         print(f'checking file {folder}/{fish}')
-        if not os.path.isfile(save_folder+'/imgDMotionVar.npy') and os.path.isfile(save_folder + '/motion_fix_.npy'):
+        if not os.path.isfile(save_folder+'/imgDMotion.tif') and os.path.isfile(save_folder + '/motion_fix_.npy'):
             if not os.path.isfile(save_folder+'/proc_registr.tmp'):
                 Path(save_folder+'/proc_registr.tmp').touch()
                 print(f'process file {folder}/{fish}')
-                imgD_ = np.load(save_folder+'/imgDNoMotion.npy').astype('float32')
+                imgD_ = imread(save_folder+'/imgDNoMotion.tif').astype('float32')
                 fix_ = np.load(save_folder + '/motion_fix_.npy').astype('float32')
                 if is_largefile:
                     len_D_ = len(imgD_)//2
@@ -121,6 +125,13 @@ def registration(is_largefile=False):
                     get_process_memory();
                     motion_correction(imgD_[len_D_:], fix_, save_folder, ext='1')
                     get_process_memory();
+                    s_ = [np.load(save_folder+'/imgDMotion%d.npy'%(__)) for __ in range(2)]
+                    s_ = np.concatenate(s_, axis=0).astype('float32')
+                    imsave(save_folder+'/imgDMotion.tif', s_, compress=1)
+                    s_ = None
+                    clear_variables(s_)
+                    os.remove(save_folder+'/imgDMotion0.npy')
+                    os.remove(save_folder+'/imgDMotion1.npy')
                 else:
                     motion_correction(imgD_, fix_, save_folder)
                     get_process_memory();
@@ -130,50 +141,35 @@ def registration(is_largefile=False):
                 Path(save_folder+'/finished_registr.tmp').touch()
     return None
 
+
 def video_detrend():
     from fish_proc.pipeline.denoise import detrend
     from pathlib import Path
     from multiprocessing import cpu_count
+    from skimage.io import imsave, imread
 
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
-    for index, row in dat_xls_file.iterrows():
+    for _, row in dat_xls_file.iterrows():
         folder = row['folder']
         fish = row['fish']
-        image_folder = f'/nrs/ahrens/Takashi/0{folder}/{fish}/'
         save_folder = dat_folder + f'{folder}/{fish}/Data'
         print(f'checking file {folder}/{fish}')
-        if not os.path.isfile(save_folder+'/Y_d.npy') and not os.path.isfile(save_folder+'/proc_detrend.tmp'):
+        if not os.path.isfile(save_folder+'/Y_d.tif') and not os.path.isfile(save_folder+'/proc_detrend.tmp'):
             if os.path.isfile(save_folder+'/finished_registr.tmp'):
                 Path(save_folder+'/proc_detrend.tmp').touch()
-                if not os.path.isfile(save_folder+'/imgDMotionVar.npy'):
-                    print(save_folder)
-                    Y1 = np.load(save_folder+'/imgDMotion0.npy').astype('float32')
-                    Y2 = np.load(save_folder+'/imgDMotion1.npy').astype('float32')
-                    Y = np.concatenate((Y1, Y2), axis=0)
-                    Y1 = None
-                    Y2 = None
-                    clear_variables((Y1, Y2))
-                else:
-                    Y = np.load(save_folder+'/imgDMotion.npy').astype('float32')
+                Y = imread(save_folder+'/imgDMotion.tif').astype('float32')
                 Y = Y.transpose([1,2,0])
-                
-                # n_split = min(Y.shape[0]//cpu_count(), 4)
-                # if n_split <= 1:
-                #     n_split = 1
-                # detrend(Y, save_folder, n_split=n_split)
-                
-                # this is only for large data
+
                 n_split = min(Y.shape[0]//cpu_count(), 8)
                 if n_split <= 1:
-                    n_split = 2
-                
+                    n_split = 2                
                 Y_len = Y.shape[0]//2
                 detrend(Y[:Y_len, :, :], save_folder, n_split=n_split//2, ext='0')
                 detrend(Y[Y_len:, :, :], save_folder, n_split=n_split//2, ext='1')
-
                 Y = None
                 clear_variables(Y)
                 get_process_memory();
+                
                 Path(save_folder+'/finished_detrend.tmp').touch()
     return None
 
