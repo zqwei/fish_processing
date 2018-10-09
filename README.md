@@ -33,7 +33,7 @@ This is the data processing used for the calcium and voltage imaging
 ## Extended -- Behavioral data
 
 ## Extended -- Single-cell RNA seq
-https://github.com/zqwei/single_cell_zebrafish
+This has been merged as an untracked branch. Please contact in person for details.
 
 --------------------------
 ## Depreciated old repos
