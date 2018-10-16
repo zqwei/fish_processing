@@ -47,6 +47,8 @@ def monitor_process():
             dat_xls_file.at[index, 'localdenoise'] = True
         if os.path.isfile(save_folder+'/Data/finished_demix.tmp'):
             dat_xls_file.at[index, 'demix'] = True
+        if os.path.isfile(save_folder+'/Data/finished_voltr.tmp'):
+            dat_xls_file.at[index, 'voltr'] = True
     print(dat_xls_file.sum(numeric_only=True))
     dat_xls_file.to_csv(dat_folder + 'Voltron Log_DRN_Exp.csv')
     # save a local copy

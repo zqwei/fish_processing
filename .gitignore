@@ -8,6 +8,7 @@ tmp*
 *Data*
 *.csv
 *.ows
+depreciated
 
 # ignore all local data
 Data
