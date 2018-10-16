@@ -411,74 +411,75 @@ def voltron():
         if os.path.isfile(save_folder+'/finished_voltr.tmp'):
             continue
 
-        if not os.path.isfile(save_folder+'/proc_voltr.tmp'):
-            Path(save_folder+'/proc_voltr.tmp').touch()
-            Y_trend_ave = np.load(f'{save_folder}/Y_trend_ave.npy')
+        Path(save_folder+'/proc_voltr.tmp').touch()
+        Y_trend_ave = np.load(f'{save_folder}/Y_trend_ave.npy')
 
-            print('update components images')
-            with open(f'{save_folder}/period_Y_demix_rlt.pkl', 'rb') as f:
-                rlt_ = pickle.load(f)
-            d1, d2 = Y_trend_ave.shape
-            mask = np.empty((d2, d1))
-            mask[:] = False
-            pixel = 4
-            mask[:pixel, :]=True
-            mask[-pixel:,:]=True
-            mask[:, :pixel]=True
-            mask[:,-pixel:]=True
-            mask = mask.astype('bool')
-            A = rlt_['fin_rlt']['a'].copy()
-            A[mask.reshape(-1),:]=0
-            A_ = A[:, (A>0).sum(axis=0)>40] # min pixel = 40
-            A_comp = np.zeros(A_.shape[0])
-            A_comp[A_.sum(axis=-1)>0] = np.argmax(A_[A_.sum(axis=-1)>0, :], axis=-1) + 1
-            plt.figure(figsize=(8,4))
-            plt.imshow(Y_trend_ave, cmap=plt.cm.gray)
-            plt.imshow(A_comp.reshape(d2, d1).T, cmap=plt.cm.nipy_spectral_r, alpha=0.7)
-            for n, nA in enumerate(A_.T):
-                nA = nA.reshape(d2, d1).T
-                pos = np.where(nA>0);
-                pos0 = pos[0];
-                pos1 = pos[1];
-                plt.text(pos1.mean(), pos0.mean(), f"{n}", fontsize=15)
-            plt.title('Components')
-            plt.axis('off')
-            plt.tight_layout()
-            plt.savefig(f'{save_image_folder}/Demixed_components.png')
+        print('update components images')
+        with open(f'{save_folder}/period_Y_demix_rlt.pkl', 'rb') as f:
+            rlt_ = pickle.load(f)
+        d1, d2 = Y_trend_ave.shape
+        mask = np.empty((d2, d1))
+        mask[:] = False
+        pixel = 4
+        mask[:pixel, :]=True
+        mask[-pixel:,:]=True
+        mask[:, :pixel]=True
+        mask[:,-pixel:]=True
+        mask = mask.astype('bool')
+        A = rlt_['fin_rlt']['a'].copy()
+        A[mask.reshape(-1),:]=0
+        A_ = A[:, (A>0).sum(axis=0)>40] # min pixel = 40
+        A_comp = np.zeros(A_.shape[0])
+        A_comp[A_.sum(axis=-1)>0] = np.argmax(A_[A_.sum(axis=-1)>0, :], axis=-1) + 1
+        plt.figure(figsize=(8,4))
+        plt.imshow(Y_trend_ave, cmap=plt.cm.gray)
+        plt.imshow(A_comp.reshape(d2, d1).T, cmap=plt.cm.nipy_spectral_r, alpha=0.7)
+        for n, nA in enumerate(A_.T):
+            nA = nA.reshape(d2, d1).T
+            pos = np.where(nA>0);
+            pos0 = pos[0];
+            pos1 = pos[1];
+            plt.text(pos1.mean(), pos0.mean(), f"{n}", fontsize=15)
+        plt.title('Components')
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(f'{save_image_folder}/Demixed_components.png')
 
-            plt.figure(figsize=(8,4))
-            plt.imshow(A_.sum(axis=-1).reshape(d2, d1).T)
-            for n, nA in enumerate(A_.T):
-                nA = nA.reshape(d2, d1).T
-                pos = np.where(nA>0);
-                pos0 = pos[0];
-                pos1 = pos[1];
-                plt.text(pos1.mean(), pos0.mean(), f"{n}", fontsize=15, color='w')
-            plt.title('Components weights')
-            plt.axis('off')
-            plt.tight_layout()
-            plt.savefig(f'{save_image_folder}/Demixed_components_weights.png')
+        plt.figure(figsize=(8,4))
+        plt.imshow(A_.sum(axis=-1).reshape(d2, d1).T)
+        for n, nA in enumerate(A_.T):
+            nA = nA.reshape(d2, d1).T
+            pos = np.where(nA>0);
+            pos0 = pos[0];
+            pos1 = pos[1];
+            plt.text(pos1.mean(), pos0.mean(), f"{n}", fontsize=15, color='w')
+        plt.title('Components weights')
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(f'{save_image_folder}/Demixed_components_weights.png')
 
 
-            print('Start computing voltron data')
-            _ = np.load(f'{save_folder}/Y_2dnorm.npz')
-            Y_d_std= _['Y_d_std']
-            Y_svd = imread(f'{save_folder}/Y_svd.tif').astype('float32')
-            mov = -Y_svd*Y_d_std
-            b = rlt_['fin_rlt']['b']
-            fb = rlt_['fin_rlt']['fb']
-            ff = rlt_['fin_rlt']['ff']
-            dims = mov.shape
-            if fb is not None:
-                b_ = np.matmul(fb, ff.T)+b
-            else:
-                b_ = b
-            mov = pos_sig_correction(mov, -1)
-            mov = mov - b_.reshape((dims[0], dims[1], len(b_)//dims[0]//dims[1]), order='F')
-            C_ = recompute_C_matrix(mov, A_)
-            base_ = recompute_C_matrix(Y_trend_ave[:, :, np.newaxis], A_)
-            np.savez_compressed(f'{save_folder}/Voltr_raw', A_=A_, C_=C_, base_=base_)
-            Path(save_folder+'/finished_voltr.tmp').touch()
+        print('Start computing voltron data')
+        _ = np.load(f'{save_folder}/Y_2dnorm.npz')
+        Y_d_std= _['Y_d_std']
+        # if os.path.getsize(f'{save_folder}/Y_svd.tif')/1024/1024/1024>=50.:
+        #     continue
+        Y_svd = imread(f'{save_folder}/Y_svd.tif').astype('float32')
+        mov = -Y_svd*Y_d_std
+        b = rlt_['fin_rlt']['b']
+        fb = rlt_['fin_rlt']['fb']
+        ff = rlt_['fin_rlt']['ff']
+        dims = mov.shape
+        if fb is not None:
+            b_ = np.matmul(fb, ff.T)+b
+        else:
+            b_ = b
+        mov = pos_sig_correction(mov, -1)
+        mov = mov - b_.reshape((dims[0], dims[1], len(b_)//dims[0]//dims[1]), order='F')
+        C_ = recompute_C_matrix(mov, A_)
+        base_ = recompute_C_matrix(Y_trend_ave[:, :, np.newaxis], A_)
+        np.savez_compressed(f'{save_folder}/Voltr_raw', A_=A_, C_=C_, base_=base_)
+        Path(save_folder+'/finished_voltr.tmp').touch()
     return None
 
 
@@ -488,10 +489,12 @@ if __name__ == '__main__':
         eval(sys.argv[1]+"()")
     else:
         # update_table(update_ods = False)
-        swim()
-        pixel_denoise()
-        registration()
-        video_detrend()
-        local_pca()
-        demix_middle_data()
-                                                                                              
+        # swim()
+        # pixel_denoise()
+        # registration()
+        # video_detrend()
+        # local_pca()
+        # demix_middle_data()
+        voltron()
+
+
