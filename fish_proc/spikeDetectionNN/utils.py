@@ -40,7 +40,7 @@ def cluster_spikes(spkc, spkprob, voltr, spk=None, print_en=False, plot_en=False
     eps = 0.5
     
     while not is_conv:
-        db = DBSCAN(eps=eps, min_samples=10).fit(data)
+        db = DBSCAN(eps=eps, min_samples=10, n_jobs=-1).fit(data)
         labels = db.labels_
         if labels.max()==0:
             is_conv = True
