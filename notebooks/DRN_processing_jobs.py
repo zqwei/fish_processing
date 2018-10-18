@@ -29,6 +29,11 @@ def monitor_process():
     dat_xls_file = pd.read_csv(dat_folder + 'Voltron Log_DRN_Exp.csv', index_col=0)
     if 'index' in dat_xls_file.columns:
         dat_xls_file = dat_xls_file.drop('index', axis=1)
+    if not 'spikes' in dat_xls_file.columns:
+        dat_xls_file['spikes']=False
+    if not 'subvolt' in dat_xls_file.columns:
+        dat_xls_file['subvolt']=False
+
     dat_xls_file['folder'] = dat_xls_file['folder'].astype(int).apply(str)
     for index, row in dat_xls_file.iterrows():
         # check swim:
@@ -49,6 +54,10 @@ def monitor_process():
             dat_xls_file.at[index, 'demix'] = True
         if os.path.isfile(save_folder+'/Data/finished_voltr.tmp'):
             dat_xls_file.at[index, 'voltr'] = True
+        if os.path.exists(save_folder+'/Data/finished_spikes.tmp'):
+            dat_xls_file.at[index, 'spikes'] = True
+        if os.path.exists(save_folder+'/Data/finished_subvolt.tmp'):
+            dat_xls_file.at[index, 'subvolt'] = True
     print(dat_xls_file.sum(numeric_only=True))
     dat_xls_file.to_csv(dat_folder + 'Voltron Log_DRN_Exp.csv')
     # save a local copy
