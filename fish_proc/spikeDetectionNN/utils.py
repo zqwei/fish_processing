@@ -30,6 +30,9 @@ def cluster_spikes(spkc, spkprob, voltr, spk=None, print_en=False, plot_en=False
     from sklearn.preprocessing import StandardScaler
     import matplotlib.pyplot as plt
     
+    if spkc.sum()<10:
+        return spkc, np.zeros(spkc.shape).astype('uint') 
+    
     spk1 = spkc.copy()
     spk2 = spkc.copy()
     data = np.vstack((voltr, spkprob)).T
