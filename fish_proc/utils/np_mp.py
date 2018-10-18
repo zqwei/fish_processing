@@ -9,6 +9,27 @@ import multiprocessing as mp
 import numpy as np
 
 
+def parallel_to_single(func1d, arr, *args, **kwargs):
+    if mp.cpu_count() == 1:
+        raise ValueError('Multiprocessing is not running on single core cpu machines, and consider to change code.')
+
+    mp_count = arr.shape[0] # fix the error if arr is shorter than cpu counts
+    print(f'Number of processes to parallel: {mp_count}')
+    chunks = [(func1d, sub_arr, args, kwargs)
+              for sub_arr in np.array_split(arr, mp_count)]
+    pool = mp.Pool(processes=mp_count)
+    individual_results = pool.map(unpacking_apply_func, chunks)
+    # Freeing the workers:
+    pool.close()
+    pool.join()
+
+    results = ()
+    # print(len(individual_results[0]))
+    for i_tuple in range(len(individual_results[0])):
+        results = results + (np.concatenate([_[i_tuple] for _ in individual_results]), )
+    return results
+
+
 def parallel_to_chunks(func1d, arr, *args, **kwargs):
     if mp.cpu_count() == 1:
         raise ValueError('Multiprocessing is not running on single core cpu machines, and consider to change code.')
