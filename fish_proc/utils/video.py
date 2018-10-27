@@ -22,4 +22,3 @@ def writeVideoFile(images, nfile_name, frameRate = 30):
     for img in images:
         writer.write(img)
     writer.release()
-
