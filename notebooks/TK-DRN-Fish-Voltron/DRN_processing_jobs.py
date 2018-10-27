@@ -269,14 +269,12 @@ def local_pca():
 
 
 def demix_middle_data():
-    from skimage import io
     import matplotlib.pyplot as plt
     import seaborn as sns
     from pathlib import Path
     from skimage.external.tifffile import imsave, imread
     from funimag import superpixel_analysis as sup
-    from trefide.extras.util_plot import correlation_pnr
-    import caiman as cm
+    from fish_proc.utils.snr import correlation_pnr
     import pickle
 
     sns.set(font_scale=2)
@@ -507,5 +505,3 @@ if __name__ == '__main__':
         # local_pca()
         # demix_middle_data()
         voltron()
-
-
