@@ -1,7 +1,8 @@
 import numpy as np
 import cv2
 from scipy.ndimage.filters import convolve
-import .noise_estimator as noise_estimator
+from . import noise_estimator
+from ..denoiseLocalPCA import denoise
 
 
 def correlation_pnr(Y,
