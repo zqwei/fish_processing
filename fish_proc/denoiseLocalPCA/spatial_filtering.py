@@ -1,6 +1,7 @@
 import numpy as np
-import caiman as cm
 import scipy as sp
+from ..utils.snr import local_correlations_fft
+from ..utils.noise_estimator import get_noise_fft
 
 def noise_estimator(Y,range_ff=[0.25,0.5],method='logmexp'):
     dims = Y.shape
@@ -51,7 +52,8 @@ def spatial_filter_image(Y_new, gHalf=[2,2], sn=None):
         sn = noise_estimator(Y_new - mean_, method='logmexp')
     else:
         print('sn given')
-    Cnb = cm.local_correlations(Y_new)
+    # Cnb = cm.local_correlations(Y_new)
+    Cnb = local_correlations_fft(Y_new)
     maps = [Cnb.min(), Cnb.max()]
 
     Y_new2 = Y_new.copy()
@@ -96,7 +98,8 @@ def spatial_filter_block(data,sn=None,maps=None,neuron_indx=None):
     data_ = data - mean_
 
     if sn is None:
-        sn, _ = cm.source_extraction.cnmf.pre_processing.get_noise_fft(data_,noise_method='mean')
+        # sn, _ = cm.source_extraction.cnmf.pre_processing.get_noise_fft(data_,noise_method='mean')
+        sn, _ = get_noise_fft(data_,noise_method='mean')
 
     sn = sn.reshape(np.prod(dims[:2]),order='F')
     D = np.diag(sn**2)
@@ -120,6 +123,8 @@ def spatial_filter_block(data,sn=None,maps=None,neuron_indx=None):
     y_hat = y_.reshape(dims[:2]+(dims[2],),order='F')
     y_hat = y_hat + mean_
 
-    Cn_y = cm.local_correlations(data)
-    Cn_yh = cm.local_correlations(y_hat)
+    # Cn_y = cm.local_correlations(data)
+    Cn_y = local_correlations_fft(data)
+    # Cn_yh = cm.local_correlations(y_hat)
+    Cn_yh = local_correlations_fft(y_hat)
     return y_hat , hat_k

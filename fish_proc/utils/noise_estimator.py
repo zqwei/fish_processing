@@ -1,7 +1,6 @@
 import numpy as np
 import scipy as sp
 import scipy.signal
-# use get_noise_fft
 
 
 def noise_estimator(Y,range_ff=[0.25,0.5],method='logmexp'):
@@ -308,6 +307,3 @@ def mean_psd(y, method='logmexp'):
         mp = np.sqrt(mp)
 
     return mp
-
-
-

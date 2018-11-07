@@ -85,9 +85,6 @@ def pad(array, reference_shape, offsets, array_type=np.nan):
 
 def nextpow2(value):
     """
-    Extracted from
-caiman.source_extraction.cnmf.deconvolution import axcov
-
     Find exponent such that 2^exponent is >= abs(value).
 
     Parameters:

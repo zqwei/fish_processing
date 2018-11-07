@@ -210,7 +210,7 @@ def threshold_data(Yd, th=2):
     """
     Threshold data: in each pixel, compute the median and median absolute deviation (MAD),
     then zero all bins (x,t) such that Yd(x,t) < med(x) + th * MAD(x).  Default value of th is 2.
- 
+
     Parameters:
     ----------------
     Yd: 3d np.darray: dimension d1 x d2 x T
@@ -871,7 +871,7 @@ def delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, word, plot_en):
     return a, c, corr_img_all_r, mask_a, num_list
 
 
-def update_AC_l2(U, V, normalize_factor, a, c, b, patch_size, corr_th_fix, 
+def update_AC_l2(U, V, normalize_factor, a, c, b, patch_size, corr_th_fix,
             maxiter=50, tol=1e-8, update_after=None, merge_corr_thr=0.5,
             merge_overlap_thr=0.7, num_plane=1, plot_en=False, max_allow_neuron_size=0.2):
     """
@@ -953,7 +953,7 @@ def update_AC_l2(U, V, normalize_factor, a, c, b, patch_size, corr_th_fix,
     return a, c, b, fb, ff, res, corr_img_all_r, num_list
 
 
-def update_AC_bg_l2(U, V, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_fix, 
+def update_AC_bg_l2(U, V, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_fix,
             maxiter=50, tol=1e-8, update_after=None,merge_corr_thr=0.5,
             merge_overlap_thr=0.7, num_plane=1, plot_en=False,
             max_allow_neuron_size=0.2):
@@ -2246,7 +2246,7 @@ def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size
         return flag
 
 
-def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix, 
+def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
             maxiter=50, tol=1e-8, update_after=None,merge_corr_thr=0.5,
             merge_overlap_thr=0.7, num_plane=1, plot_en=False, max_allow_neuron_size=0.2):
 
@@ -2323,7 +2323,7 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
     return a, c, b, fb, ff, res, corr_img_all_r, num_list
 
 
-def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_fix, 
+def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_fix,
             maxiter=50, tol=1e-8, update_after=None,merge_corr_thr=0.5,
             merge_overlap_thr=0.7, num_plane=1, plot_en=False,
             max_allow_neuron_size=0.2):
