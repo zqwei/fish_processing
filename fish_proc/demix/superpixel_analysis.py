@@ -19,9 +19,6 @@ from scipy.sparse import csc_matrix
 from sklearn.decomposition import TruncatedSVD
 from matplotlib import ticker
 
-# To do
-# split and merge functions
-
 # ----- utility functions (to decimate data and estimate noise level) -----
 #########################################################################################################
 
@@ -1319,23 +1316,6 @@ def demix(Yd, U, V, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1], pass
         c_tf = c_tf.reshape(T,int(c_tf.shape[0]/T),order="F");
     print("time: " + str(time.time()-start));
 
-    if plot_en:
-        if pass_num > 1:
-            spatial_sum_plot(a0, a, dims, num_list, text);
-        if bg:
-            Yd_res = reconstruct(Yd, a, c, b, fb, ff);
-        else:
-            Yd_res = reconstruct(Yd, a, c, b);
-        Yd_res = threshold_data(Yd_res, th=0);
-        Cnt = local_correlations_fft(Yd_res);
-        scale = np.maximum(1, int(Cnt.shape[1]/Cnt.shape[0]));
-        plt.figure(figsize=(8*scale,8))
-        ax1 = plt.subplot(1,1,1);
-        show_img(ax1, Cnt);
-        ax1.set(title="Local mean correlation for residual")
-        ax1.title.set_fontsize(15)
-        ax1.title.set_fontweight("bold")
-        plt.show();
     fin_rlt = {'a':a, 'c':c, 'c_tf':c_tf, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
     if Yd_min < 0:
         Yd += Yd_min_pw;
@@ -1546,32 +1526,6 @@ def match_comp_projection(rlt_xyc, rlt_yzc, rlt_xya, rlt_yza, dims1, dims2, th):
             order[ii] = np.nan;
     order = np.asarray(order,dtype=int);
     return order
-
-
-def corr_plot(corr,cmap="jet"):
-    fig = plt.figure(figsize=(20,2))
-    #ax1 = plt.subplot(1,1,1)
-    ax1 = fig.add_subplot(111)
-    img1 = ax1.imshow(corr,cmap=cmap,interpolation="hamming")
-    ax1.set_xticks([])
-    ax1.set_yticks([])
-    plt.tick_params(axis='both', left='off', top='off', right='off', bottom='off', labelleft='off', labeltop='off', labelright='off', labelbottom='off')
-    divider = make_axes_locatable(ax1)
-    #cax = divider.append_axes("right", size="1%", pad=0.1)
-    cax = divider.new_horizontal(size="1%",pad=0.1);
-    fig.add_axes(cax)
-    if corr.max()<1:
-        cbar=fig.colorbar(img1, cax=cax,orientation='vertical',spacing='uniform',format="%.1f")
-    else:
-        cbar=fig.colorbar(img1, cax=cax,orientation='vertical',spacing='uniform')
-    cbar.ax.tick_params(width=2,labelsize=18)
-    tick_locator = ticker.MaxNLocator(nbins=6,prune="both")
-    cbar.locator = tick_locator
-    cbar.update_ticks()
-
-    ax1.axis('off')
-    plt.tight_layout()
-    return fig
 
 
 def superpixel_single_plot(connect_mat_1,unique_pix,brightness_rank_sup,text):
@@ -2538,20 +2492,6 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             c_tf = np.hstack((c_tf, l1_tf(c[:,ii], sigma[ii])));
         c_tf = c_tf.reshape(T,int(c_tf.shape[0]/T),order="F");
     print("time: " + str(time.time()-start));
-    if plot_en:
-        if pass_num > 1:
-            spatial_sum_plot(a0, a, dims, num_list, text);
-        Yd_res = reconstruct(Yd, a, c, b);
-        Yd_res = threshold_data(Yd_res, th=0);
-        Cnt = local_correlations_fft(Yd_res);
-        scale = np.maximum(1, int(Cnt.shape[1]/Cnt.shape[0]));
-        plt.figure(figsize=(8*scale,8))
-        ax1 = plt.subplot(1,1,1);
-        show_img(ax1, Cnt);
-        ax1.set(title="Local mean correlation for residual")
-        ax1.title.set_fontsize(15)
-        ax1.title.set_fontweight("bold")
-        plt.show();
     fin_rlt = {'a':a, 'c':c, 'c_tf':c_tf, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
     if Yd_min < 0:
         Yd += Yd_min_pw;

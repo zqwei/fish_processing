@@ -11,19 +11,23 @@ def noise_estimator(Y,range_ff=[0.25,0.5],method='logmexp'):
         V_hat = Y.copy()
     sns = []
     for i in range(V_hat.shape[0]):
-        ff, Pxx = sp.signal.welch(V_hat[i,:],nperseg=min(256,dims[-1]))
-        ind1 = ff > range_ff[0]
-        ind2 = ff < range_ff[1]
-        ind = np.logical_and(ind1, ind2)
-        #Pls.append(Pxx)
-        #ffs.append(ff)
-        Pxx_ind = Pxx[ind]
-        sn = {
-            'mean': lambda Pxx_ind: np.sqrt(np.mean(np.divide(Pxx_ind, 2))),
-            'median': lambda Pxx_ind: np.sqrt(np.median(np.divide(Pxx_ind, 2))),
-            'logmexp': lambda Pxx_ind: np.sqrt(np.exp(np.mean(np.log(np.divide(Pxx_ind, 2)))))
-        }[method](Pxx_ind)
-        sns.append(sn)
+        if np.count_nonzero(V_hat[i,:]):
+            # skip the computation for pure zero vectors
+            ff, Pxx = sp.signal.welch(V_hat[i,:],nperseg=min(256,dims[-1]))
+            ind1 = ff > range_ff[0]
+            ind2 = ff < range_ff[1]
+            ind = np.logical_and(ind1, ind2)
+            #Pls.append(Pxx)
+            #ffs.append(ff)
+            Pxx_ind = Pxx[ind]
+            sn = {
+                'mean': lambda Pxx_ind: np.sqrt(np.mean(np.divide(Pxx_ind, 2))),
+                'median': lambda Pxx_ind: np.sqrt(np.median(np.divide(Pxx_ind, 2))),
+                'logmexp': lambda Pxx_ind: np.sqrt(np.exp(np.mean(np.log(np.divide(Pxx_ind, 2)))))
+            }[method](Pxx_ind)
+            sns.append(sn)
+        else:
+            sns.append(0)
     sns = np.asarray(sns)
     if len(dims)>2:
         sns = sns.reshape(dims[:2],order='F')
