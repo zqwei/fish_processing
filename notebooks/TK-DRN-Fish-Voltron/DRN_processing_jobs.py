@@ -273,7 +273,7 @@ def demix_middle_data():
     import seaborn as sns
     from pathlib import Path
     from skimage.external.tifffile import imsave, imread
-    from funimag import superpixel_analysis as sup
+    from fish_proc.demix import superpixel_analysis as sup
     from fish_proc.utils.snr import correlation_pnr
     import pickle
 
