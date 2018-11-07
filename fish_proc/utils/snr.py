@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 from scipy.ndimage.filters import convolve
 from . import noise_estimator
-from ..denoiseLocalPCA import denoise
+# from ..denoiseLocalPCA import denoise
 
 
 def correlation_pnr(Y,
@@ -38,6 +38,7 @@ def correlation_pnr(Y,
     Y = Y - Y.mean(2,keepdims=True)
     data_max = Y.max(2)#,keepdims=True)
     data_std = denoise.noise_level(Y)#[0]
+    data_std = noise_level(Y)
     pnr = np.divide(data_max, data_std)
     if remove_small_val:
         pnr[pnr < 0] = 0
