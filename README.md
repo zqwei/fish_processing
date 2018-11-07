@@ -47,6 +47,7 @@ If you are looking for / using one of the following repos, these are merged to i
 ### Parallel processing
 * Spark
 * Parallel processing -- Dask
+* GPU supports
 
 ### Merge git repos
 * zfish_osc
@@ -60,8 +61,3 @@ If you are looking for / using one of the following repos, these are merged to i
 
 ### General problem
 * long time series data
-
-### Network
-* Train network with scale invariant to voltron signal
-
-### Issue in df/f computation
