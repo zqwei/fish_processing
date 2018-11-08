@@ -1,7 +1,34 @@
 import numpy as np
 import scipy as sp
 import scipy.signal
+import cv2
 
+
+def resize(Y, size, interpolation=cv2.INTER_AREA):
+    """
+    :param Y:
+    :param size:
+    :param interpolation:
+    :return:
+    faster and 3D compatible version of skimage.transform.resize
+    """
+    if Y.ndim == 2:
+        return cv2.resize(Y, tuple(size[::-1]), interpolation=interpolation)
+
+    elif Y.ndim == 3:
+        if np.isfortran(Y):
+            return (cv2.resize(np.array(
+                [cv2.resize(y, size[:2], interpolation=interpolation) for y in Y.T]).T
+                .reshape((-1, Y.shape[-1]), order='F'),
+                (size[-1], np.prod(size[:2])), interpolation=interpolation).reshape(size, order='F'))
+        else:
+            return np.array([cv2.resize(y, size[:0:-1], interpolation=interpolation) for y in
+                    cv2.resize(Y.reshape((len(Y), -1), order='F'),
+                        (np.prod(Y.shape[1:]), size[0]), interpolation=interpolation)
+                    .reshape((size[0],) + Y.shape[1:], order='F')])
+    else:  # TODO deal with ndim=4
+        raise NotImplementedError
+    return
 
 def noise_estimator(Y,range_ff=[0.25,0.5],method='logmexp'):
     dims = Y.shape
