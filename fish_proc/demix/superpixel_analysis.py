@@ -1,204 +1,7 @@
-import cv2
 import time
-
-import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
-import scipy.stats as ss
-import scipy.ndimage
-import scipy.signal
-import scipy.sparse
-import scipy
-import cvxpy as cvx
+import matplotlib.pyplot as plt
 
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from sklearn.decomposition import NMF
-from sklearn import linear_model
-from scipy.ndimage.filters import convolve
-from scipy.sparse import csc_matrix
-from sklearn.decomposition import TruncatedSVD
-from matplotlib import ticker
-
-# ----- utility functions (to decimate data and estimate noise level) -----
-#########################################################################################################
-
-
-def resize(Y, size, interpolation=cv2.INTER_AREA):
-    """
-
-    :param Y:
-    :param size:
-    :param interpolation:
-    :return:
-    faster and 3D compatible version of skimage.transform.resize
-    """
-    if Y.ndim == 2:
-        return cv2.resize(Y, tuple(size[::-1]), interpolation=interpolation)
-
-    elif Y.ndim == 3:
-        if np.isfortran(Y):
-            return (cv2.resize(np.array(
-                [cv2.resize(y, size[:2], interpolation=interpolation) for y in Y.T]).T
-                .reshape((-1, Y.shape[-1]), order='F'),
-                (size[-1], np.prod(size[:2])), interpolation=interpolation).reshape(size, order='F'))
-        else:
-            return np.array([cv2.resize(y, size[:0:-1], interpolation=interpolation) for y in
-                    cv2.resize(Y.reshape((len(Y), -1), order='F'),
-                        (np.prod(Y.shape[1:]), size[0]), interpolation=interpolation)
-                    .reshape((size[0],) + Y.shape[1:], order='F')])
-    else:  # TODO deal with ndim=4
-        raise NotImplementedError
-    return
-
-
-def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, opencv=True):
-    """
-    Computes the correlation image for the input dataset Y using a faster FFT based method, adapt from caiman
-    Parameters:
-    -----------
-    Y:  np.ndarray (3D or 4D)
-        Input movie data in 3D or 4D format
-    eight_neighbours: Boolean
-        Use 8 neighbors if true, and 4 if false for 3D data (default = True)
-        Use 6 neighbors for 4D data, irrespectively
-    swap_dim: Boolean
-        True indicates that time is listed in the last axis of Y (matlab format)
-        and moves it in the front
-    opencv: Boolean
-        If True process using open cv method
-    Returns:
-    --------
-    Cn: d1 x d2 [x d3] matrix, cross-correlation with adjacent pixels
-    """
-
-    if swap_dim:
-        Y = np.transpose(Y, tuple(np.hstack((Y.ndim - 1, list(range(Y.ndim))[:-1]))))
-
-    Y = Y.astype('float32')
-    Y -= np.mean(Y, axis=0)
-    Ystd = np.std(Y, axis=0)
-    Ystd[Ystd == 0] = np.inf
-    Y /= Ystd
-
-    if Y.ndim == 4:
-        if eight_neighbours:
-            sz = np.ones((3, 3, 3), dtype='float32')
-            sz[1, 1, 1] = 0
-        else:
-            sz = np.array([[[0, 0, 0], [0, 1, 0], [0, 0, 0]],
-                            [[0, 1, 0], [1, 0, 1], [0, 1, 0]],
-                            [[0, 0, 0], [0, 1, 0], [0, 0, 0]]], dtype='float32')
-    else:
-        if eight_neighbours:
-            sz = np.ones((3, 3), dtype='float32')
-            sz[1, 1] = 0
-        else:
-            sz = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype='float32')
-
-    if opencv and Y.ndim == 3:
-        Yconv = Y.copy()
-        for idx, img in enumerate(Yconv):
-            Yconv[idx] = cv2.filter2D(img, -1, sz, borderType=0)
-        MASK = cv2.filter2D(
-            np.ones(Y.shape[1:], dtype='float32'), -1, sz, borderType=0)
-    else:
-        Yconv = convolve(Y, sz[np.newaxis, :], mode='constant')
-        MASK = convolve(
-            np.ones(Y.shape[1:], dtype='float32'), sz, mode='constant')
-    Cn = np.mean(Yconv * Y, axis=0) / MASK
-    return Cn
-
-
-def mean_psd(y, method ='logmexp'):
-    """
-    Averaging the PSD, adapt from caiman
-    Parameters:
-    ----------
-        y: np.ndarray
-             PSD values
-        method: string
-            method of averaging the noise.
-            Choices:
-             'mean': Mean
-             'median': Median
-             'logmexp': Exponential of the mean of the logarithm of PSD (default)
-    Returns:
-    -------
-        mp: array
-            mean psd
-    """
-    if method == 'mean':
-        mp = np.sqrt(np.mean(np.divide(y, 2), axis=-1))
-    elif method == 'median':
-        mp = np.sqrt(np.median(np.divide(y, 2), axis=-1))
-    else:
-        mp = np.log(np.divide((y + 1e-10), 2))
-        mp = np.mean(mp, axis=-1)
-        mp = np.exp(mp)
-        mp = np.sqrt(mp)
-
-    return mp
-
-
-def noise_estimator(Y, noise_range=[0.25, 0.5], noise_method='logmexp', max_num_samples_fft=4000,
-                    opencv=True):
-    """Estimate the noise level for each pixel by averaging the power spectral density.
-    Inputs:
-    -------
-    Y: np.ndarray
-    Input movie data with time in the last axis
-    noise_range: np.ndarray [2 x 1] between 0 and 0.5
-        Range of frequencies compared to Nyquist rate over which the power spectrum is averaged
-        default: [0.25,0.5]
-    noise method: string
-        method of averaging the noise.
-        Choices:
-            'mean': Mean
-            'median': Median
-            'logmexp': Exponential of the mean of the logarithm of PSD (default)
-    Output:
-    ------
-    sn: np.ndarray
-        Noise level for each pixel
-    """
-    T = Y.shape[-1]
-    # Y=np.array(Y,dtype=np.float64)
-
-    if T > max_num_samples_fft:
-        Y = np.concatenate((Y[..., 1:max_num_samples_fft // 3 + 1],
-                            Y[..., np.int(T // 2 - max_num_samples_fft / 3 / 2):np.int(T // 2 + max_num_samples_fft / 3 / 2)],
-                            Y[..., -max_num_samples_fft // 3:]), axis=-1)
-        T = np.shape(Y)[-1]
-
-    # we create a map of what is the noise on the FFT space
-    ff = np.arange(0, 0.5 + 1. / T, 1. / T)
-    ind1 = ff > noise_range[0]
-    ind2 = ff <= noise_range[1]
-    ind = np.logical_and(ind1, ind2)
-    # we compute the mean of the noise spectral density s
-    if Y.ndim > 1:
-        if opencv:
-            import cv2
-            psdx = []
-            for y in Y.reshape(-1, T):
-                dft = cv2.dft(y, flags=cv2.DFT_COMPLEX_OUTPUT).squeeze()[
-                    :len(ind)][ind]
-                psdx.append(np.sum(1. / T * dft * dft, 1))
-            psdx = np.reshape(psdx, Y.shape[:-1] + (-1,))
-        else:
-            xdft = np.fft.rfft(Y, axis=-1)
-            xdft = xdft[..., ind[:xdft.shape[-1]]]
-            psdx = 1. / T * abs(xdft)**2
-        psdx *= 2
-        sn = mean_psd(psdx, method=noise_method)
-
-    else:
-        xdft = np.fliplr(np.fft.rfft(Y))
-        psdx = 1. / T * (xdft**2)
-        psdx[1:] *= 2
-        sn = mean_psd(psdx[ind[:psdx.shape[0]]], method=noise_method)
-
-    return sn
 
 ################################################# begin functions for superpixel analysis ##################################################
 ############################################################################################################################################
@@ -207,17 +10,14 @@ def threshold_data(Yd, th=2):
     """
     Threshold data: in each pixel, compute the median and median absolute deviation (MAD),
     then zero all bins (x,t) such that Yd(x,t) < med(x) + th * MAD(x).  Default value of th is 2.
-
     Parameters:
     ----------------
     Yd: 3d np.darray: dimension d1 x d2 x T
         denoised data
-
     Return:
     ----------------
     Yt: 3d np.darray: dimension d1 x d2 x T
         cleaned, thresholded data
-
     """
     dims = Yd.shape;
     Yt = np.zeros(dims);
@@ -263,7 +63,7 @@ def find_superpixel(Yt, cut_off_point, length_cut, eight_neighbours=True):
         all the random numbers used to idicate superpixels in connect_mat_1
 
     """
-
+    import networkx as nx
     dims = Yt.shape;
     ref_mat = np.arange(np.prod(dims[:-1])).reshape(dims[:-1],order='F')
     ######### calculate correlation ############
@@ -364,6 +164,7 @@ def find_superpixel_3d(Yt, num_plane, cut_off_point, length_cut, eight_neighbour
         all the random numbers used to idicate superpixels in connect_mat_1
 
     """
+    import networkx as nx
     dims = Yt.shape;
     Yt_3d = Yt.reshape(dims[0],int(dims[1]/num_plane),num_plane,dims[2],order="F");
     dims = Yt_3d.shape;
@@ -440,9 +241,10 @@ def find_superpixel_3d(Yt, num_plane, cut_off_point, length_cut, eight_neighbour
 
 def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
     """
-    Apply rank 1 NMF to find spatial and temporal initialization for each superpixel in Yt.
+    Apply rank-1-NMF to find spatial and temporal initialization for each superpixel in Yt.
     """
-
+    from sklearn.decomposition import NMF
+    from sklearn.decomposition import TruncatedSVD
     dims = Yt.shape;
     T = dims[2];
     Yt_r= Yt.reshape(np.prod(dims[:2]),T,order = "F");
@@ -453,17 +255,11 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
     for comp in comps:
         if(len(comp) > length_cut):
             y_temp = Yt_r[list(comp),:];
-            #nmf = nimfa.Nmf(y_temp, seed="nndsvd", rank=1)
-            #nmf_fit = nmf();
-            #U_mat[list(comp),ii] = np.array(nmf.W)[:,0];
-            #V_mat[:,[ii]] = nmf.H.T;
             model = NMF(n_components=1, init='custom');
             U_mat[list(comp),ii] = model.fit_transform(y_temp, W=y_temp.mean(axis=1,keepdims=True),
                                         H = y_temp.mean(axis=0,keepdims=True))[:,0];
-            #U_mat[list(comp),ii] = model.fit_transform(y_temp)[:,0];
             V_mat[:,ii] = model.components_;
             ii = ii+1;
-
     if bg:
         bg_comp_pos = np.where(U_mat.sum(axis=1) == 0)[0];
         y_temp = Yt_r[bg_comp_pos,:];
@@ -476,7 +272,6 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
     else:
         bg_v = None;
         bg_u = None;
-
     return V_mat, U_mat, bg_v, bg_u
 
 
@@ -582,12 +377,8 @@ def fast_sep_nmf(M, r, th, normalize=1):
         normM = np.maximum(0, normM - np.matmul(U[:,[ii]].T, M)**2);
         normM_sqrt = np.sqrt(normM);
         ii = ii+1;
-    #coef = np.matmul(np.matmul(np.linalg.inv(np.matmul(M[:,pure_pixels].T, M[:,pure_pixels])), M[:,pure_pixels].T), M);
     pure_pixels = np.array(pure_pixels);
-    #coef_rank = coef.copy(); ##### from large to small
-    #for ii in range(len(pure_pixels)):
-    #	coef_rank[:,ii] = [x for _,x in sorted(zip(len(pure_pixels) - ss.rankdata(coef[:,ii]), pure_pixels))];
-    return pure_pixels #, coef, coef_rank
+    return pure_pixels
 
 
 def prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, U_mat, V_mat, more=False):
@@ -621,6 +412,7 @@ def prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, U_mat, V_mat, mo
         initialization of constant background
     normalize_factor: std of Y
     """
+    from scipy.stats import rankdata
 
     dims = Yd.shape;
     T = dims[2];
@@ -638,7 +430,7 @@ def prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, U_mat, V_mat, mo
     v_max = V_mat.max(axis=0);
     brightness = u_max * v_max;
     brightness_arg = np.argsort(-brightness); #
-    brightness_rank = U_mat.shape[1] - ss.rankdata(brightness,method="ordinal");
+    brightness_rank = U_mat.shape[1] - rankdata(brightness,method="ordinal");
     U_mat = U_mat[:,brightness_arg];
     V_mat = V_mat[:,brightness_arg];
 
@@ -728,6 +520,7 @@ def make_mask(corr_img_all_r, corr, mask_a, num_plane=1,times=10,max_allow_neuro
     """
     update the spatial support: connected region in corr_img(corr(Y,c)) which is connected with previous spatial support
     """
+    import scipy.ndimage
     s = np.ones([3,3]);
     unit_length = int(mask_a.shape[0]/num_plane);
     dims = corr_img_all_r.shape;
@@ -799,14 +592,16 @@ def merge_components(a,c,corr_img_all_r,U,V,normalize_factor,num_list,patch_size
     flag: merge or not
 
     """
-
+    from sklearn.decomposition import NMF
+    from scipy.sparse import csc_matrix, triu
+    import networkx as nx
     f = np.ones([c.shape[0],1]);
     ############ calculate overlap area ###########
     a = csc_matrix(a);
-    a_corr = scipy.sparse.triu(a.T.dot(a),k=1);
+    a_corr = triu(a.T.dot(a),k=1);
     cor = csc_matrix((corr_img_all_r>merge_corr_thr)*1);
     temp = cor.sum(axis=0);
-    cor_corr = scipy.sparse.triu(cor.T.dot(cor),k=1);
+    cor_corr = triu(cor.T.dot(cor),k=1);
     cri = np.asarray((cor_corr/(temp.T)) > merge_overlap_thr)*np.asarray((cor_corr/temp) > merge_overlap_thr)*((a_corr>0).toarray());
     a = a.toarray();
 
@@ -1069,6 +864,7 @@ def order_superpixels(permute_col, unique_pix, U_mat, V_mat):
     """
     order superpixels according to brightness
     """
+    from scipy.stats import rankdata
     ####################### pull out all the superpixels ################################
     permute_col = list(permute_col);
     pos = [permute_col.index(x) for x in unique_pix];
@@ -1081,7 +877,7 @@ def order_superpixels(permute_col, unique_pix, U_mat, V_mat):
     v_max = V_mat.max(axis=0);
     brightness = u_max * v_max;
     brightness_arg = np.argsort(-brightness); #
-    brightness_rank = U_mat.shape[1] - ss.rankdata(brightness,method="ordinal");
+    brightness_rank = U_mat.shape[1] - rankdata(brightness,method="ordinal");
     return brightness_rank
 
 
@@ -1089,10 +885,10 @@ def l1_tf(y, sigma):
     """
     L1_trend filter to denoise the final temporal traces
     """
+    import cvxpy as cvx
     if np.abs(sigma/y.max())<=1e-3:
         print('Do not denoise (high SNR: noise_level=%.3e)'%sigma);
         return y
-#
     n = y.size
     # Form second difference matrix.
     D = (np.diag(2*np.ones(n),0)+np.diag(-1*np.ones(n-1),1)+np.diag(-1*np.ones(n-1),-1))[1:n-1];
@@ -1100,9 +896,7 @@ def l1_tf(y, sigma):
     obj = cvx.Minimize(cvx.norm(D*x, 1));
     constraints = [cvx.norm(y-x,2)<=sigma*np.sqrt(n)]
     prob = cvx.Problem(obj, constraints)
-#
     prob.solve(solver=cvx.ECOS,verbose=False)
-
     # Check for error.
     if prob.status != cvx.OPTIMAL:
         raise Exception("Solver did not converge!")
@@ -1164,9 +958,9 @@ def demix(Yd, U, V, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1], pass
     update_after: integer
         merge and update spatial support every 'update_after' iterations
     **************************************************
-    *** parameters for l1_TF on temporal components after local NMF (optional): ***
+    *** parameters for l1_TF on temporal components after local-NMF (optional): ***
     TF: boolean
-        if True, then run l1_TF on temporal components after local NMF
+        if True, then run l1_TF on temporal components after local-NMF
     fudge_factor: float, usually set to 1
         do l1_TF up to fudge_factor*noise level i.e.
         min_ci' |ci'|_1 s.t. |ci' - ci|_F <= fudge_factor*sigma_i\sqrt(T)
@@ -1181,11 +975,11 @@ def demix(Yd, U, V, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1], pass
 
     If multiple passes: return {'rlt':rlt, 'fin_rlt':fin_rlt, "superpixel_rlt":superpixel_rlt}
     - rlt is a dictionary containing results for first pass: {'a', 'c', 'b', "fb", "ff" (if having fluctuate background, otherwise is null),
-                                            'res' (residual for NMF iterations, 0 in current code since not calculate it), 'corr_img_all_r'(correlation images),
+                                            'res' (residual for NMF-iterations, 0 in current code since not calculate it), 'corr_img_all_r'(correlation images),
                                             'num_list' (current component corresponds to which superpixel)}.
 
     - fin_rlt is a dictionary containing results for final pass: {'a', 'c', 'c_tf'(if apply TF, otherwise is null), b', "fb", "ff" (if having fluctuate background, otherwise is null),
-                                            'res' (residual for NMF iterations, 0 in current code since not calculate it),
+                                            'res' (residual for NMF-iterations, 0 in current code since not calculate it),
                                             'corr_img_all_r'(correlation images), 'num_list' (current component corresponds to which superpixel)}.
 
     - superpixel_rlt is a list (length = number of pass) containing pure superpixel information for each pass (this result is mainly for plot):
@@ -1281,10 +1075,6 @@ def demix(Yd, U, V, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1], pass
         else:
             a, c, b, normalize_factor, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=True);
         print("time: " + str(time.time()-start));
-
-        if plot_en:
-            Cnt = local_correlations_fft(Yt);
-            pure_superpixel_corr_compare_plot(connect_mat_1, unique_pix, pure_pix, brightness_rank_sup, brightness_rank, Cnt, text);
         print("start " + str(ii+1) + " pass iteration!")
         if ii == pass_num - 1:
             maxiter = max_iter_fin;
@@ -1309,6 +1099,7 @@ def demix(Yd, U, V, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1], pass
     start = time.time();
     c_tf = [];
     if TF:
+        from ..utils.noise_estimator import noise_estimator
         sigma = noise_estimator(c.T);
         sigma *= fudge_factor
         for ii in range(c.shape[1]):
@@ -1408,6 +1199,7 @@ def extract_pure_and_superpixels(Yd, cut_off_point=0.95, length_cut=15, th=2, re
     print("prepare iteration!")
     a_ini, c_ini, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=False);
     if plot_en:
+        from ..utils.snr import local_correlations_fft
         Cnt = local_correlations_fft(Yt);
         fig = pure_superpixel_corr_compare_plot(connect_mat_1, unique_pix, pure_pix, brightness_rank_sup, brightness_rank, Cnt, text);
     else:
@@ -1628,7 +1420,7 @@ def pure_superpixel_corr_compare_plot(connect_mat_1, unique_pix, pure_pix, brigh
 
 
 def show_img(ax, img,vmin=None,vmax=None):
-    # Visualize local correlation, adapt from kelly's code
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
     im = ax.imshow(img,cmap='jet')
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.1)
@@ -1775,6 +1567,7 @@ def spatial_match_projection_plot(order, number, rlt_xya, rlt_yza, dims1, dims2)
 
 
 def spatial_compare_single_plot(a, patch_size):
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
     scale = (patch_size[1]/patch_size[0]);
     fig = plt.figure(figsize=(4*scale,4));
     ax1 = plt.subplot(1,1,1);
@@ -1911,129 +1704,7 @@ def temporal_compare_plot(c, c_tf, ini = False):
     return fig
 
 
-################################### code for sparse NMF, and simulating data ###################################
-##################### vanilla nmf with random initialization with single penalty #########################
-######### min|Y-UV|_2^2 + lambda*(|U|_1 + |V|_1) #####################
-def vanilla_nmf_lasso(Yd, num_component, maxiter, tol, penalty_param, c=None):
-    if Yd.min() < 0:
-        Yd -= Yd.min(axis=2, keepdims=True);
 
-    y0 = Yd.reshape(np.prod(Yd.shape[:2]),-1,order="F");
-    if c is None:
-        c = np.random.rand(y0.shape[1],num_component);
-        c = c*np.sqrt(y0.mean()/num_component);
-
-    clf_c = linear_model.Lasso(alpha=(penalty_param/(2*y0.shape[0])),positive=True,fit_intercept=False);
-    clf_a = linear_model.Lasso(alpha=(penalty_param/(2*y0.shape[1])),positive=True,fit_intercept=True);
-    res = np.zeros(maxiter);
-    for iters in range(maxiter):
-        temp = clf_a.fit(c, y0.T);
-        a = temp.coef_;
-        b = temp.intercept_;
-        b = b.reshape(b.shape[0],1,order="F");
-        c = clf_c.fit(a, y0-b).coef_;
-        b = np.maximum(0, y0.mean(axis=1,keepdims=True)-(a*(c.mean(axis=0,keepdims=True))).sum(axis=1,keepdims=True));
-
-        res[iters] = np.linalg.norm(y0 - np.matmul(a, c.T) - b,"fro")**2 + penalty_param*(abs(a).sum() + abs(c).sum());
-        if iters > 0 and abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
-            break;
-    if iters > 0:
-        print(abs(res[iters] - res[iters-1])/res[iters-1]);
-
-    temp = np.sqrt((a**2).sum(axis=0,keepdims=True));
-    c = c*temp;
-    a = a/temp;
-    brightness = np.zeros(a.shape[1]);
-    a_max = a.max(axis=0);
-    c_max = c.max(axis=0);
-    brightness = a_max * c_max;
-    brightness_rank = np.argsort(-brightness); #a.shape[1] - ss.rankdata(brightness,method="ordinal");
-    a = a[:,brightness_rank];
-    c = c[:,brightness_rank];
-
-    corr_img_all_r = a.copy();
-    for ii in range(a.shape[1]):
-        corr_img_all_r[:,ii] = vcorrcoef2(y0, c[:,ii]);
-    #corr_img_all_r = np.corrcoef(y0,c.T)[:y0.shape[0],y0.shape[0]:];
-    corr_img_all_r = corr_img_all_r.reshape(Yd.shape[0],Yd.shape[1],-1,order="F");
-    return {"a":a, "c":c, "b":b, "res":res, "corr_img_all_r":corr_img_all_r}
-
-
-def nnls_L0(X, Yp, noise):
-    """
-    Nonnegative least square with L0 penalty, adapt from caiman
-    It will basically call the scipy function with some tests
-    we want to minimize :
-    min|| Yp-W_lam*X||**2 <= noise
-    with ||W_lam||_0  penalty
-    and W_lam >0
-    Parameters:
-    ---------
-        X: np.array
-            the input parameter ((the regressor
-        Y: np.array
-            ((the regressand
-    Returns:
-    --------
-        W_lam: np.array
-            the learned weight matrices ((Models
-    """
-    W_lam, RSS = scipy.optimize.nnls(X, np.ravel(Yp))
-    RSS = RSS * RSS
-    if RSS > noise:  # hard noise constraint problem infeasible
-        return W_lam
-
-    print("hard noise constraint problem feasible!");
-    while 1:
-        eliminate = []
-        for i in np.where(W_lam[:-1] > 0)[0]:  # W_lam[:-1] to skip background
-            mask = W_lam > 0
-            mask[i] = 0
-            Wtmp, tmp = scipy.optimize.nnls(X * mask, np.ravel(Yp))
-            if tmp * tmp < noise:
-                eliminate.append([i, tmp])
-        if eliminate == []:
-            return W_lam
-        else:
-            W_lam[eliminate[np.argmin(np.array(eliminate)[:, 1])][0]] = 0
-
-
-def vanilla_nmf_multi_lasso(y0, num_component, maxiter, tol, fudge_factor=1, c_penalize=True, penalty_param=1e-4):
-    sn = (noise_estimator(y0)**2)*y0.shape[1];
-    c = np.random.rand(y0.shape[1],num_component);
-    c = c*np.sqrt(y0.mean()/num_component);
-    a = np.zeros([y0.shape[0],num_component]);
-    res = np.zeros(maxiter);
-    clf = linear_model.Lasso(alpha=penalty_param,positive=True,fit_intercept=False);
-    for iters in range(maxiter):
-        for ii in range(y0.shape[0]):
-            a[ii,:] = nnls_L0(c, y0[[ii],:].T, fudge_factor * sn[ii]);
-        if c_penalize:
-            norma = (a**2).sum(axis=0);
-            for jj in range(num_component):
-                idx_ = np.setdiff1d(np.arange(num_component),ii);
-                R_ = y0 - a[:,idx_].dot(c[:,idx_].T);
-                V_ = (a[:,jj].T.dot(R_)/norma[jj]).reshape(1,y0.shape[1]);
-                sv = (noise_estimator(V_)[0]**2)*y0.shape[1];
-                c[:,jj] = nnls_L0(np.identity(y0.shape[1]), V_, fudge_factor * sv);
-        else:
-            #c = clf.fit(a, y0).coef_;
-            c = np.maximum(0, np.matmul(np.matmul(np.linalg.inv(np.matmul(a.T,a)), a.T), y0)).T;
-        res[iters] = np.linalg.norm(y0 - np.matmul(a, c.T),"fro");
-        if iters > 0 and abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
-            break;
-    if iters > 0:
-        print(abs(res[iters] - res[iters-1])/res[iters-1]);
-    return a, c, res
-
-
-def sim_noise(dims, noise_source):
-    np.random.seed(0);
-    N = np.prod(dims);
-    noise_source = noise_source.reshape(np.prod(noise_source.shape), order="F");
-    random_indices = np.random.randint(0, noise_source.shape[0], size=N);
-    noise_sim = noise_source[random_indices].reshape(dims,order="F");
-    return noise_sim
 
 ############################################# code for whole Y ###########################################################
 ##########################################################################################################################
@@ -2143,15 +1814,16 @@ def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size
     flag: merge or not
 
     """
-
+    from sklearn.decomposition import NMF
+    from scipy.sparse import csc_matrix, triu
+    import networkx as nx
     f = np.ones([c.shape[0],1]);
     ############ calculate overlap area ###########
     a = csc_matrix(a);
-    a_corr = scipy.sparse.triu(a.T.dot(a),k=1);
-    #cri = (np.corrcoef(c.T) > merge_corr_thr)*((a_corr > 0).toarray());
+    a_corr = triu(a.T.dot(a),k=1);
     cor = csc_matrix((corr_img_all_r>merge_corr_thr)*1);
     temp = cor.sum(axis=0);
-    cor_corr = scipy.sparse.triu(cor.T.dot(cor),k=1);
+    cor_corr = triu(cor.T.dot(cor),k=1);
     cri = np.asarray((cor_corr/(temp.T)) > merge_overlap_thr)*np.asarray((cor_corr/temp) > merge_overlap_thr)*((a_corr>0).toarray());#.toarray())*(((cor_corr/(temp.T)) > merge_overlap_thr).toarray())*((a_corr > 0).toarray());
     a = a.toarray();
 
@@ -2183,13 +1855,9 @@ def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size
             c_temp = c[:,comp].mean(axis=1,keepdims=True);
             model = NMF(n_components=1, init='custom')
             a_temp = model.fit_transform(y_temp, W=a_temp, H = (c_temp.T));
-
-            #print("yuan" + str(np.linalg.norm(y_temp,"fro")));
-            #print("jun" + str(np.linalg.norm(y_temp - np.matmul(a_temp,c_temp.T),"fro")));
             a_zero[mask_temp] = a_temp;
             c_temp = model.components_.T;
             corr_temp = vcorrcoef_Y(U/normalize_factor, c_temp);
-
             a_pri = np.hstack((a_pri,a_zero));
             c_pri = np.hstack((c_pri,c_temp));
             corr_pri = np.hstack((corr_pri,corr_temp));
@@ -2250,14 +1918,7 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
             if sum(temp):
                 a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!", plot_en);
             a = a*mask_a;
-
-        #residual = (np.matmul(U, V.T) - np.matmul(a, c.T) - b);
-        #res[iters] = np.linalg.norm(residual, "fro");
-        #print(res[iters]);
         print("time: " + str(time.time()-start));
-        #if iters > 0:
-        #	if abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
-        #		break;
     temp = np.sqrt((a**2).sum(axis=0,keepdims=True));
     c = c*temp;
     a = a/temp;
@@ -2272,8 +1933,6 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
     num_list = num_list[brightness_rank];
     ff = None;
     fb = None;
-    #if iters > 0:
-    #	print("residual relative change: " + str(abs(res[iters] - res[iters-1])/res[iters-1]));
     return a, c, b, fb, ff, res, corr_img_all_r, num_list
 
 
@@ -2340,14 +1999,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
                 a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!", plot_en);
             a = a*mask_a;
             mask_ab = np.hstack((mask_a,fg));
-
-        #residual = (np.matmul(U, V.T) - np.matmul(a, c.T) - b - np.matmul(fb,ff.T));
-        #res[iters] = np.linalg.norm(residual, "fro");
-        #print(res[iters]);
         print("time: " + str(time.time()-start));
-        #if iters > 0:
-        #	if abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
-        #		break;
     temp = np.sqrt((a**2).sum(axis=0,keepdims=True));
     c = c*temp;
     a = a/temp;
@@ -2360,8 +2012,6 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
     c = c[:,brightness_rank];
     corr_img_all_r = corr_img_all_r[:,:,brightness_rank];
     num_list = num_list[brightness_rank];
-    #if iters > 0:
-    #	print("residual relative change: " + str(abs(res[iters] - res[iters-1])/res[iters-1]));
     return a, c, b, fb, ff, res, corr_img_all_r, num_list
 
 
@@ -2457,10 +2107,6 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             a, c, b, normalize_factor, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=True);
 
         print("time: " + str(time.time()-start));
-
-        if plot_en:
-            Cnt = local_correlations_fft(Yt);
-            pure_superpixel_corr_compare_plot(connect_mat_1, unique_pix, pure_pix, brightness_rank_sup, brightness_rank, Cnt, text);
         print("start " + str(ii+1) + " pass iteration!")
         if ii == pass_num - 1:
             maxiter = max_iter_fin;
@@ -2486,6 +2132,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     c_tf = [];
     start = time.time();
     if TF:
+        from ..utils.noise_estimator import noise_estimator
         sigma = noise_estimator(c.T);
         sigma *= fudge_factor
         for ii in range(c.shape[1]):
