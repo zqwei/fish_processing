@@ -112,7 +112,7 @@ def voltr2subvolt():
     return None
 
 
-def voltron():
+def voltron(fext='', is_mask=False):
     import matplotlib.pyplot as plt
     import seaborn as sns
     from pathlib import Path
@@ -136,11 +136,12 @@ def voltron():
         print('=====================================')
         print(save_folder)
 
-        if os.path.isfile(save_folder+'/finished_voltr.tmp'):
+        if os.path.isfile(save_folder+f'/finished_voltr{fext}.tmp'):
             continue
 
-        Path(save_folder+'/proc_voltr.tmp').touch()
+        Path(save_folder+f'/proc_voltr{fext}.tmp').touch()
         Y_trend_ave = np.load(f'{save_folder}/Y_trend_ave.npy')
+        if is_mask:
 
         print('update components images')
         with open(f'{save_folder}/period_Y_demix_rlt.pkl', 'rb') as f:
@@ -207,7 +208,7 @@ def voltron():
         C_ = recompute_C_matrix(mov, A_)
         base_ = recompute_C_matrix(Y_trend_ave[:, :, np.newaxis], A_)
         np.savez_compressed(f'{save_folder}/Voltr_raw', A_=A_, C_=C_, base_=base_)
-        Path(save_folder+'/finished_voltr.tmp').touch()
+        Path(save_folder+f'/finished_voltr{fext}.tmp').touch()
     return None
 
 
