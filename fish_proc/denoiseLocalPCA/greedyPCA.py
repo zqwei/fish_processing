@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import os
 from scipy.stats import norm
 from sklearn.utils.extmath import randomized_svd
 from sklearn import preprocessing
@@ -12,6 +13,7 @@ import time
 from . import spatial_filtering as sp_filters
 from . import trefide
 from . import tools as tools_
+import random
 
 
 def kurto_one(x):
@@ -305,7 +307,14 @@ def compute_svd(M,
     """
 
     if method == 'vanilla':
-        U, s, Vt = np.linalg.svd(M, full_matrices=False)
+        try:
+            U, s, Vt = np.linalg.svd(M, full_matrices=False)
+        except:
+            print('SVD did not converge -- using truncted PCA at 2 components instead')
+            if not os.path.isdir('SVD_error'):
+                os.mkdir('SVD_error')
+            np.save(f'SVD_error/SVD_matrix_id{int(random.random()*1e10)}', M)
+            U, s, Vt = randomized_svd(M, n_components=n_components)
     elif method == 'randomized':
         U, s, Vt = randomized_svd(M, n_components=n_components,
                 n_iter=7, random_state=None)
