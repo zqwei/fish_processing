@@ -612,15 +612,16 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
 
             temp = (mask_a.sum(axis=0) == 0);
             if sum(temp):
-                a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!", plot_en);
+                a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!");
             a = a*mask_a;
-            res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
-            print(res[iters])
-            if (res[0] - res[iters])/res[0]<tol:
-                break
-        if iters==0: 
-            res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
-            print(res[iters])
+            # ZW -- this line take so long to compute, taking out at the moments
+            # res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
+            # print(res[iters])
+            # if (res[0] - res[iters])/res[0]<tol:
+            #     break
+        # if iters==0: 
+        #     res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
+        #     print(res[iters])
         print("time: " + str(time.time()-start))
         #if iters > 0:
         #	if abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
@@ -677,7 +678,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
 
         temp = (a.sum(axis=0) == 0);
         if sum(temp):
-            a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero a!", plot_en);
+            a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero a!");
         b = np.maximum(0, uv_mean-(a*(c.mean(axis=0,keepdims=True))).sum(axis=1,keepdims=True));
 
         temp = ls_solve_acc_Y(np.hstack((a,fb)), U-b, mask=None, beta_LS=np.hstack((c,ff))).T;
@@ -687,7 +688,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
 
         temp = (c.sum(axis=0) == 0);
         if sum(temp):
-            a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero c!", plot_en);
+            a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero c!");
 
         b = np.maximum(0, uv_mean-(a*(c.mean(axis=0,keepdims=True))).sum(axis=1,keepdims=True));
 
@@ -708,16 +709,17 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
 
             temp = (mask_a.sum(axis=0) == 0);
             if sum(temp):
-                a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!", plot_en);
+                a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!");
             a = a*mask_a;
             mask_ab = np.hstack((mask_a,fg));
-            res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
-            print(res[iters])
-            if (res[0] - res[iters])/res[0]<tol:
-                break
-        if iters==0: 
-            res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
-            print(res[iters])
+            # ZW -- this line take so long to compute, taking out at the moments
+            # res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
+            # print(res[iters])
+            # if (res[0] - res[iters])/res[0]<tol:
+            #     break
+        # if iters==0: 
+        #     res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
+        #     print(res[iters])
         print("time: " + str(time.time()-start));
         #if iters > 0:
         #	if abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
@@ -845,12 +847,12 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         if bg:
             a, c, b, fb, ff, res, corr_img_all_r, num_list = update_AC_bg_l2_Y(Yd.reshape(np.prod(dims),-1,order="F"), normalize_factor, a, c, b, ff, fb, dims,
                                         corr_th_fix, maxiter=maxiter, tol=1e-8, update_after=update_after,
-                                        merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, plot_en=plot_en, max_allow_neuron_size=max_allow_neuron_size);
+                                        merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, max_allow_neuron_size=max_allow_neuron_size);
 
         else:
             a, c, b, fb, ff, res, corr_img_all_r, num_list = update_AC_l2_Y(Yd.reshape(np.prod(dims),-1,order="F"), normalize_factor, a, c, b, dims,
                                         corr_th_fix, maxiter=maxiter, tol=1e-8, update_after=update_after,
-                                        merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, plot_en=plot_en, max_allow_neuron_size=max_allow_neuron_size);
+                                        merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, max_allow_neuron_size=max_allow_neuron_size);
         print("time: " + str(time.time()-start));
         superpixel_rlt.append({'connect_mat_1':connect_mat_1, 'pure_pix':pure_pix, 'unique_pix':unique_pix, 'brightness_rank':brightness_rank, 'brightness_rank_sup':brightness_rank_sup});
         if pass_num > 1 and ii == 0:

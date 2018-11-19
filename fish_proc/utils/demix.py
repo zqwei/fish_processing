@@ -5,7 +5,7 @@ Ziqiang Wei @ 2018
 weiz@janelia.hhmi.org
 '''
 
-from funimag.superpixel_analysis import *
+from ..demix.superpixel_analysis import *
 import numpy as np
 
 def pos_sig_correction(mov, axis_):
