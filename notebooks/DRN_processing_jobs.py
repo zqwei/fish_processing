@@ -25,7 +25,7 @@ def monitor_process():
     Update Voltron Log_DRN_Exp.csv
     monitor process of processing
     '''
-    dat_xls_file = pd.read_csv('../Voltron Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     if 'index' in dat_xls_file.columns:
         dat_xls_file = dat_xls_file.drop('index', axis=1)
     dat_xls_file['folder'] = dat_xls_file['folder'].astype(int).apply(str)
@@ -60,7 +60,7 @@ def monitor_process():
         if os.path.exists(save_folder+'/Data/finished_subvolt.tmp'):
             dat_xls_file.at[index, 'subvolt'] = True
     print(dat_xls_file.sum(numeric_only=True))
-    dat_xls_file.to_csv('../Voltron Log_DRN_Exp.csv')
+    dat_xls_file.to_csv('./Voltron_Log_DRN_Exp.csv')
     return None
 
 
@@ -69,7 +69,7 @@ def swim():
     Processing swim using TK's code
     '''
     from fish_proc.utils.ep import process_swim
-    dat_xls_file = pd.read_csv('../Voltron Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
     for _, row in dat_xls_file.iterrows():
         folder = row['folder']
@@ -93,7 +93,7 @@ def pixel_denoise():
     Generate files -- imgDNoMotion.tif, motion_fix_.npy
     '''
     from fish_proc.pipeline.preprocess import pixel_denoise, pixel_denoise_img_seq
-    dat_xls_file = pd.read_csv('../Voltron Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
     for index, row in dat_xls_file.iterrows():
         folder = row['folder']
@@ -135,7 +135,7 @@ def registration(is_largefile=True):
     from pathlib import Path
     from fish_proc.pipeline.preprocess import motion_correction
     from skimage.io import imread, imsave
-    dat_xls_file = pd.read_csv('../Voltron Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
 
     for index, row in dat_xls_file.iterrows():
@@ -185,7 +185,7 @@ def video_detrend():
     from pathlib import Path
     from multiprocessing import cpu_count
     from skimage.io import imsave, imread
-    dat_xls_file = pd.read_csv('../Voltron Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
 
     for index, row in dat_xls_file.iterrows():
@@ -230,7 +230,7 @@ def local_pca():
     from fish_proc.pipeline.denoise import denose_2dsvd
     from pathlib import Path
     from skimage.external.tifffile import imsave, imread
-    dat_xls_file = pd.read_csv('../Voltron Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
 
     for index, row in dat_xls_file.iterrows():
@@ -283,7 +283,7 @@ def demix_middle_data():
 
     sns.set(font_scale=2)
     sns.set_style("white")
-    dat_xls_file = pd.read_csv('../Voltron Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
 
     for index, row in dat_xls_file.iterrows():
@@ -400,7 +400,7 @@ def demix_middle_data():
 
 
 def demix_components(ext=''):
-    dat_xls_file = pd.read_csv('../Voltron Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
     for index, row in dat_xls_file.iterrows():
         demix_middle_data_with_mask(row, ext=ext)
