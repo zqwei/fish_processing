@@ -1,7 +1,12 @@
 # Data processing
 This is the data processing used for the calcium and voltage imaging
 
+## Example data
+`/nrs/ahrens/Ziqiang/Takashi_DRN_project/RawData/10182018/Fish3-2/`
+
 ## Environment setup
+* Must-have packages:
+    * [Dipy](http://nipy.org/dipy/) -- code for Registration
 * Optional packages:
     * [Caiman](https://github.com/flatironinstitute/CaImAn) -- code for visualization, basic statistics such as SNR, local correlation etc.
     * [FunImag](https://github.com/paninski-lab/funimag) -- superpixel cell segmentation
