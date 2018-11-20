@@ -3,7 +3,7 @@ import pandas as pd
 import os, sys
 from fish_proc.utils.memory import get_process_memory, clear_variables
 
-dat_folder = '/nrs/ahrens/Ziqiang/Takashi_DRN_project/ProcessedData/'
+dat_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/ProcessedData/'
 cameraNoiseMat = '/groups/ahrens/ahrenslab/Ziqiang/gainMat/gainMat20180208'
 
 
