@@ -4,7 +4,7 @@ import os, sys
 from fish_proc.utils.memory import get_process_memory, clear_variables
 
 dat_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/ProcessedData/'
-cameraNoiseMat = '/groups/ahrens/ahrenslab/Ziqiang/gainMat/gainMat20180208'
+cameraNoiseMat = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/gainMat/gainMat20180208'
 
 
 # def update_table(update_ods = False):
