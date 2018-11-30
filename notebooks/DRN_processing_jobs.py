@@ -112,9 +112,9 @@ def pixel_denoise():
                 print(f'process file {folder}/{fish}')
                 try:
                     if os.path.exists(image_folder+'Registered/raw.tif'):
-                        imgD_ = pixel_denoise(image_folder, 'Registered/raw.tif', save_folder, cameraNoiseMat, plot_en=True)
+                        imgD_ = pixel_denoise(image_folder, 'Registered/raw.tif', save_folder, cameraNoiseMat, plot_en=False)
                     else:
-                        imgD_ = pixel_denoise_img_seq(image_folder, save_folder, cameraNoiseMat, plot_en=True)
+                        imgD_ = pixel_denoise_img_seq(image_folder, save_folder, cameraNoiseMat, plot_en=False)
                     t_ = len(imgD_)//2
                     win_ = 150
                     fix_ = imgD_[t_-win_:t_+win_].mean(axis=0)
