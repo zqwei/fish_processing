@@ -120,9 +120,10 @@ def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
 
     return imgDFiltered
 
-
+######### Registration bag helpers ##########################
 def rigid_stacks_element(move_frame, fix=None, trans=None):
 
+    #print("rigid stacks element: "+str(move_frame.shape))
     trans_affine = trans.estimate_rigid2d(fix, move_frame)
     trans_mat = trans_affine.affine
     trans_move = trans_affine.transform(move_frame)
@@ -134,6 +135,7 @@ def rigid_stacks_element(move_frame, fix=None, trans=None):
 def motion_correction_element(image_frame, fix):
     from fish_proc.imageRegistration.imTrans import ImAffine
 
+    #print("Image_frame shape: "+str(image_frame.shape))
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
     trans.ss_sigma_factor = 1.0
@@ -141,7 +143,45 @@ def motion_correction_element(image_frame, fix):
     imgDMotion_element, imgDMotionVar_element = rigid_stacks_element(image_frame, fix=fix, trans=trans)
 
     return imgDMotion_element, imgDMotionVar_element
+###############################################################
 
+
+######### Registration manual batch helpers ###################
+def batch_motion_correction(seq, fix):
+    sub_results = []
+    for image_frame in seq:
+        sub_results.append(motion_correction_dask_array(image_frame, fix))
+    return sub_results
+
+def rigid_stacks_dask_array(move, fix=None, trans=None):
+    # start_time = time.time()
+    if move.ndim < 3:
+        move = move[np.newaxis, :]
+
+    trans_move = move.copy()
+    move_list = []
+
+    for nframe, move_ in enumerate(move):
+        trans_affine = trans.estimate_rigid2d(fix, move_)
+        trans_mat = trans_affine.affine
+        trans_move[nframe] = trans_affine.transform(move_)
+        move_list.append([trans_mat[0, 1] / trans_mat[0, 0], trans_mat[0, 2], trans_mat[1, 2]])
+
+    # print("--- %s seconds for rigidstacks---" % (time.time() - start_time))  # --salma
+    return trans_move, move_list
+
+
+def motion_correction_dask_array(image_frame, fix):
+    from fish_proc.imageRegistration.imTrans import ImAffine
+
+    trans = ImAffine()
+    trans.level_iters = [1000, 1000, 100]
+    trans.ss_sigma_factor = 1.0
+
+    imgDMotion_element, imgDMotionVar_element = rigid_stacks_dask_array(image_frame, fix=fix, trans=trans)
+
+    return imgDMotion_element, imgDMotionVar_element
+###############################################################
 
 def compute_dff(sig):
     bg = np.percentile(sig, 5, axis=1)
