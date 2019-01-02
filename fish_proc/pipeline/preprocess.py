@@ -39,33 +39,47 @@ def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=Fal
     imsave(fishName+'/imgDNoMotion.tif', imgD_, compress=1)
     return imgD_
 
+#@profile  # --salma for memory profiling
 def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
     from ..utils import getCameraInfo
     from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
     from glob import glob
     from skimage import io
+    import time  # --salma
 
     cameraInfo = getCameraInfo.getCameraInfo(folderName)
     pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
     pixel_x = (pixel_x0, pixel_x1)
     pixel_y = (pixel_y0, pixel_y1)
+    start_time = time.time()  # --salma
     imgFiles = sorted(glob(folderName+'TM*_CM*_CHN*.tif'))
+    print("--- %s seconds for sorting image files ---" % (time.time() - start_time))  # --salma
+    start_time = time.time()  # --salma
     imgStack = np.concatenate([io.imread(_).astype('float32') for _ in imgFiles], axis=0).astype('float32')
+    print("--- %s seconds for image stack creation ---" % (time.time() - start_time))  # --salma
     if plot_en:
         plt.figure(figsize=(4, 3))
         plt.imshow(imgStack[0], cmap='gray')
         plt.savefig(fishName + '/Raw_frame_0.png')
+    start_time = time.time()  # --salma
     offset = np.load(cameraNoiseMat +'/offset_mat.npy').astype('float32')
+    print("--- %s seconds for loading offset data ---" % (time.time() - start_time))  # --salma
+    start_time = time.time()  # --salma
     gain = np.load(cameraNoiseMat +'/gain_mat.npy').astype('float32')
+    print("--- %s seconds for loading gain data ---" % (time.time() - start_time))  # --salma
     offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
     gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
-
+    start_time = time.time()  # --salma
     ## simple denoise
     imgD = simpleDN(imgStack, offset=offset_, gain=gain_)
+    print("--- %s seconds for simple DN function ---" % (time.time() - start_time))  # --salma
     ## smooth dead pixels
     win_ = 3
+    start_time = time.time()  # --salma
     imgD_ = median_filter(imgD, size=(1, win_, win_))
+    print("--- %s seconds for median filter ---" % (time.time() - start_time))  # --salma
+
     # np.save(fishName+'/imgDNoMotion', imgD_)
     imsave(fishName+'/imgDNoMotion.tif', imgD_, compress=1)
     return imgD_
@@ -82,25 +96,33 @@ def regidStacks(move, fix=None, trans=None):
         move_list.append([trans_mat[0, 1]/trans_mat[0, 0], trans_mat[0, 2], trans_mat[1, 2]])
     return trans_move, move_list
 
+
 def motion_correction(imgD_, fix_, fishName, ext=''):
     from ..imageRegistration.imTrans import ImAffine
     from ..utils.np_mp import parallel_to_chunks
     from ..utils.memory import get_process_memory, clear_variables
+    import time
 
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
     trans.ss_sigma_factor = 1.0
     print('memory usage before processing -- ')
-    get_process_memory();
+    #get_process_memory();
+    start_time = time.time() # --salma
     imgDMotion, imgDMotionVar = parallel_to_chunks(regidStacks, imgD_, fix=fix_, trans=trans)
+    print("--- %s seconds for parallel_to_chunks rigidstacks---" % (time.time() - start_time))  # --salma
+
     # imgStackMotion, imgStackMotionVar = parallel_to_chunks(regidStacks, imgStack, fix=fix, trans=trans)
     # np.save('tmpData/imgStackMotion', imgStackMotion)
     # np.save('tmpData/imgStackMotionVar', imgStackMotionVar)
+    start_time = time.time()  # --salma
     np.save(fishName+'/imgDMotion%s'%(ext), imgDMotion)
     np.save(fishName+'/imgDMotionVar%s'%(ext), imgDMotionVar)
-    print('memory usage after processing -- ')
-    get_process_memory();
-    print('relase memory')
+    print("--- %s seconds for saving imgDMotion and imgDMotionVar---" % (time.time() - start_time))  # --salma
+
+    #print('memory usage after processing -- ')
+    #get_process_memory();
+    print('release memory')
     imgDMotion = None
     imgDMotionVar = None
     clear_variables((imgDMotion, imgDMotionVar))
