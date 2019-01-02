@@ -1,4 +1,4 @@
-from trefide.preprocess import _get_spline_trend
+from .preprocess import _get_spline_trend
 import numpy as np
 from scipy.signal import butter, lfilter
 
