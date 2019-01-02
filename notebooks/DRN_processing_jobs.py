@@ -93,6 +93,9 @@ def pixel_denoise():
     Generate files -- imgDNoMotion.tif, motion_fix_.npy
     '''
     from fish_proc.pipeline.preprocess import pixel_denoise, pixel_denoise_img_seq
+    import time   #--salma
+
+    start_time = time.time()
     dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
     for index, row in dat_xls_file.iterrows():
@@ -114,18 +117,25 @@ def pixel_denoise():
                     if os.path.exists(image_folder+'Registered/raw.tif'):
                         imgD_ = pixel_denoise(image_folder, 'Registered/raw.tif', save_folder, cameraNoiseMat, plot_en=False)
                     else:
+                        #start_time = time.time()  # --salma
                         imgD_ = pixel_denoise_img_seq(image_folder, save_folder, cameraNoiseMat, plot_en=False)
+                        #print("--- %s seconds for pixel denoising function ---" % (time.time() - start_time)) # --salma
+                    #start_time = time.time() # --salma
                     t_ = len(imgD_)//2
                     win_ = 150
                     fix_ = imgD_[t_-win_:t_+win_].mean(axis=0)
                     np.save(save_folder + '/motion_fix_', fix_)
-                    get_process_memory();
+                    #get_process_memory(); #--salma commented this out
                     imgD_ = None
                     fix_ = None
                     clear_variables((imgD_, fix_))
+                    #print("--- %s seconds for saving motion_fix and clearning variables ---" % (time.time() - start_time))  # --salma
+
                 except MemoryError as err:
                     print(f'Memory Error on file {folder}/{fish}: {err}')
+    print("--- %s seconds for pixel denoise ---" % (time.time() - start_time))  # --salma
     return None
+
 
 
 def registration(is_largefile=True):
@@ -135,39 +145,56 @@ def registration(is_largefile=True):
     from pathlib import Path
     from fish_proc.pipeline.preprocess import motion_correction
     from skimage.io import imread, imsave
+    import time
+
     dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
 
     for index, row in dat_xls_file.iterrows():
         folder = row['folder']
         fish = row['fish']
-        save_folder = dat_folder + f'{folder}/{fish}/Data'
+        save_folder = dat_folder + f'{folder}/{fish}/Data/backup_before_improvements'
         print(f'checking file {folder}/{fish}')
         if not os.path.isfile(save_folder+'/imgDMotion.tif') and os.path.isfile(save_folder + '/motion_fix_.npy'):
             if not os.path.isfile(save_folder+'/proc_registr.tmp'):
                 Path(save_folder+'/proc_registr.tmp').touch()
                 print(f'process file {folder}/{fish}')
+
+                start_time = time.time()
                 imgD_ = imread(save_folder+'/imgDNoMotion.tif').astype('float32')
+                print("--- %s seconds for loading imgDNoMotion.tiff ---" % (time.time() - start_time))  # --salma
+
+                start_time = time.time()
                 fix_ = np.load(save_folder + '/motion_fix_.npy').astype('float32')
+                print("--- %s seconds for loading motion_fix_.tiff ---" % (time.time() - start_time))  # --salma
+
                 if is_largefile:
                     len_D_ = len(imgD_)//2
                     motion_correction(imgD_[:len_D_], fix_, save_folder, ext='0')
-                    get_process_memory();
+                    #get_process_memory();
                     motion_correction(imgD_[len_D_:], fix_, save_folder, ext='1')
-                    get_process_memory();
+                    #get_process_memory();
                     imgD_ = None
                     fix_ = None
                     clear_variables((imgD_, fix_))
+
+                    start_time = time.time()
                     s_ = [np.load(save_folder+'/imgDMotion%d.npy'%(__)) for __ in range(2)]
                     s_ = np.concatenate(s_, axis=0).astype('float32')
+                    print("--- %s seconds for loading load and concatenate imgDMotion ---" % (time.time() - start_time))  # --salma
+
+                    start_time = time.time()
                     imsave(save_folder+'/imgDMotion.tif', s_, compress=1)
+                    print("--- %s seconds for saving imgDMotion,tiff ---" % (
+                                time.time() - start_time))  # --salma
+
                     s_ = None
                     clear_variables(s_)
                     os.remove(save_folder+'/imgDMotion0.npy')
                     os.remove(save_folder+'/imgDMotion1.npy')
                 else:
                     motion_correction(imgD_, fix_, save_folder)
-                    get_process_memory();
+                    #get_process_memory();
                     imgD_ = None
                     fix_ = None
                     clear_variables((imgD_, fix_))
@@ -191,7 +218,7 @@ def video_detrend():
     for index, row in dat_xls_file.iterrows():
         folder = row['folder']
         fish = row['fish']
-        save_folder = dat_folder + f'{folder}/{fish}/Data'
+        save_folder = dat_folder + f'{folder}/{fish}/Data/backup_before_improvements'
         print(f'checking file {folder}/{fish}')
         if os.path.isfile(save_folder+'/finished_detrend.tmp'):
             continue
@@ -200,6 +227,7 @@ def video_detrend():
             if os.path.isfile(save_folder+'/finished_registr.tmp'):
                 Path(save_folder+'/proc_detrend.tmp').touch()
                 Y = imread(save_folder+'/imgDMotion.tif').astype('float32')
+                print(Y.shape)
                 Y = Y.transpose([1,2,0])
                 n_split = min(Y.shape[0]//cpu_count(), 8)
                 if n_split <= 1:
@@ -209,7 +237,7 @@ def video_detrend():
                 detrend(Y[Y_len:, :, :], save_folder, n_split=n_split//2, ext='1')
                 Y = None
                 clear_variables(Y)
-                get_process_memory();
+                get_process_memory()
                 Y = []
                 Y.append(np.load(save_folder+'/Y_d0.npy').astype('float32'))
                 Y.append(np.load(save_folder+'/Y_d1.npy').astype('float32'))
@@ -217,7 +245,7 @@ def video_detrend():
                 imsave(save_folder+'/Y_d.tif', Y, compress=1)
                 Y = None
                 clear_variables(Y)
-                get_process_memory();
+                get_process_memory()
                 os.remove(save_folder+'/Y_d0.npy')
                 os.remove(save_folder+'/Y_d1.npy')
                 # os.remove(save_folder+'/Y_trend0.npy')
@@ -267,7 +295,7 @@ def local_pca():
                 Y_d_ = None
                 Y_d = None
                 clear_variables(Y_d)
-                get_process_memory();
+                get_process_memory()
                 Path(save_folder+'/finished_local_denoise.tmp').touch()
     return None
 
