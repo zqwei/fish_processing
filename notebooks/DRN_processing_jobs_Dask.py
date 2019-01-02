@@ -92,7 +92,7 @@ def pixel_denoise():
     import time   #--salma
     import dask.array as da
 
-    start_time = time.time()
+    start_time_init = time.time()
     dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
     for index, row in dat_xls_file.iterrows():
@@ -100,7 +100,7 @@ def pixel_denoise():
         fish = row['fish']
         image_folder = row['rootDir'] + f'{folder}/{fish}/'
         fish_folder = dat_folder + f'{folder}/{fish}/'
-        save_folder = dat_folder + f'{folder}/{fish}/Data'
+        save_folder = dat_folder + f'{folder}/{fish}/Data/backup_after_improvements/'
 
         if os.path.exists(image_folder):
             print(f'checking file {folder}/{fish}')
@@ -108,7 +108,7 @@ def pixel_denoise():
                 os.makedirs(save_folder)
             if os.path.exists(save_folder + 'imgDNoMotionDask.tif'):
                 continue
-            if not os.path.isfile(save_folder + '/motion_fix_dask.npy'):
+            if not os.path.isfile(save_folder + 'motion_fix_dask.npy'):
                 print(f'process file {folder}/{fish}')
                 try:
                     if os.path.exists(image_folder+'Registered/raw.tif'):
@@ -122,7 +122,8 @@ def pixel_denoise():
                     win_ = 150
 
                     start_time = time.time()
-                    fix_ = da.mean(imgD_[t_-win_:t_+win_], axis=0)
+                    fix_ = imgD_[t_ - win_:t_ + win_].mean(axis=0)
+                    #fix_ = da.mean(imgD_[t_-win_:t_+win_], axis=0)
                     print("--- %s seconds for fix mean ---" % (time.time() - start_time)) # --salma
 
                     start_time = time.time()
@@ -138,7 +139,7 @@ def pixel_denoise():
 
                 except MemoryError as err:
                     print(f'Memory Error on file {folder}/{fish}: {err}')
-    print("--- %s seconds for pixel denoise ---" % (time.time() - start_time))  # --salma
+    print("--- %s seconds for pixel denoise ---" % (time.time() - start_time_init))  # --salma
     return None
 
 
@@ -147,10 +148,11 @@ def registration(is_largefile=True):
     Generate imgDMotion.tif
     '''
     from pathlib import Path
-    from fish_proc.pipeline.preprocess_dask import motion_correction_element
+    from fish_proc.pipeline.preprocess_dask import motion_correction_element, batch_motion_correction
     from skimage.io import imread, imsave
     import multiprocessing as mp
     import dask.bag as db
+    import dask
     import time
 
     dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
@@ -168,31 +170,81 @@ def registration(is_largefile=True):
             if not os.path.isfile(save_folder+'/proc_registr.tmp'):
                 Path(save_folder+'/proc_registr.tmp').touch()
                 print(f'process file {folder}/{fish}')
+
                 imgD = imread(save_folder+'/imgDNoMotionDask.tif').astype('float32')
                 print("--- %s seconds for image read ---" % (
                         time.time() - start_time))
                 fix = np.load(save_folder + '/motion_fix_dask.npy').astype('float32')
 
-                print("Run in batches of: "+str(mp.cpu_count()))
-                batch = db.from_sequence(imgD, npartitions= mp.cpu_count())
-                batch = batch.map(motion_correction_element, fix)
-                result = batch.compute()
+                ######################## Registration using bag #############################
+                # len_D = len(imgD) // 2
+                #
+                # num_partitions = mp.cpu_count()
+                # print("registration batch into: " + str(num_partitions))
+                # batch1 = db.from_sequence(imgD[:len_D], npartitions=num_partitions)
+                # #batch1 = db.from_sequence(imgD[:len_D])
+                # batch1 = batch1.map(motion_correction_element, fix)
+                #
+                # batch2 = db.from_sequence(imgD[len_D:], npartitions=num_partitions)
+                # #batch2 = db.from_sequence(imgD[len_D:])
+                # batch2 = batch2.map(motion_correction_element, fix)
+                #
+                # result1 = batch1.compute()
+                # result2 = batch2.compute()
+                #
+                # print("--- %s seconds for registration_elementwise before zip---" % (
+                #         time.time() - start_time))
+                #
+                # imgDMotion1, imgDMotionVar1 = zip(*result1)
+                # imgDMotion2, imgDMotionVar2 = zip(*result2)
+                #
+                # imgDMotion = np.concatenate((imgDMotion1, imgDMotion2), axis=0)
+                # imgDMotionVar = np.concatenate((imgDMotionVar1, imgDMotionVar2), axis=0)
+                #
+                # print("--- %s seconds for registration_elementwise before save---" % (
+                #         time.time() - start_time))
+                #
+                # imgDMotion = np.array(imgDMotion, dtype=np.float32)
+                # imsave(save_folder + '/imgDMotion.tif', imgDMotion, compress=1)
+                #
+                # np.save(save_folder + '/imgDMotionVar', imgDMotionVar)
+                #
+                # imgDMotion = None
+                # imgDMotionVar = None
+                #
+                # Path(save_folder + '/finished_registr.tmp').touch()
+
+                ######################## Registration using batch #############################
+
+                batches = []
+
+                for img_frame in range(0, len(imgD), 100):  # in steps of 100
+                    result_batch = dask.delayed(batch_motion_correction)(imgD[img_frame: img_frame + 100], fix)
+                    batches.append(result_batch)
+
+                result = dask.compute(*batches)
+
+                print("--- %s seconds for registration batch before flaten---" % (
+                        time.time() - start_time))
+
+                flat_list = [item for sublist in result for item in sublist]
 
                 print("--- %s seconds for registration_elementwise before zip---" % (
                         time.time() - start_time))
 
-                imgDMotion, imgDMotionVar = zip(*result)
+                imgDMotion, imgDMotionVar = zip(*flat_list)
 
                 print("--- %s seconds for registration_elementwise before save---" % (
                         time.time() - start_time))
 
                 imgDMotion = np.array(imgDMotion, dtype=np.float32)
                 imsave(save_folder + '/imgDMotion.tif', imgDMotion, compress=1)
-
                 np.save(save_folder + '/imgDMotionVar', imgDMotionVar)
 
                 imgDMotion = None
                 imgDMotionVar = None
+
+                Path(save_folder + '/finished_registr.tmp').touch()
 
             print("--- %s seconds for registration_elementwise after save---" % (
                     time.time() - start_time))
@@ -565,4 +617,5 @@ if __name__ == '__main__':
         eval(sys.argv[1]+f"({ext})")
     else:
         #monitor_process()
+        #pixel_denoise()
         registration()
