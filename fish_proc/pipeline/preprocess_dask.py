@@ -106,11 +106,16 @@ def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
     imgDFiltered = imgDFiltered.compute() # - compute here before saving
     print("--- %s seconds for median filter ---" % (time.time() - start_time))  # --salma
 
-    # np.save(fishName+'/imgDNoMotion', imgD_)
     start_time = time.time()  # --salma
-    io.imsave(fishName+'/imgDNoMotionDask.tif', imgDFiltered, compress=1)
-    print("--- %s seconds for saving imgDNoMotionDask file ---" % (time.time() - start_time))  # --salma
+    #io.imsave(fishName+'/imgDNoMotionDask.tif', imgDFiltered, compress=1) #dask it
+    n_splits = imgDFiltered.shape[0] // 50
+    imgDFilteredSplit = np.split(imgDFiltered, n_splits)
+    delayed_imsave = dask.delayed(io.imsave, pure=True)  # Lazy version of imsave
+    lazy_images = [delayed_imsave(fishName + '/imgDNoMotion' + '%04d'%index + '.tif', img, compress=1) for index, img
+                   in enumerate(imgDFilteredSplit)]  # Lazily evaluate imsave on each path
+    dask.compute(*lazy_images)
 
+    print("--- %s seconds for save dask ---" % (time.time() - start_time))  # --salma
 
     if plot_en:
         plt.figure(figsize=(4, 3))
