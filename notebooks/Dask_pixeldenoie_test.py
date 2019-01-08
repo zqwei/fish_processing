@@ -17,6 +17,7 @@ import dask_ndfilters as daf
 import dask
 import time
 from os.path import exists
+from pathlib import Path
 
 
 dat_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/ProcessedData/'
@@ -28,7 +29,6 @@ sample_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/10182018/Fish3-2
 #@profile
 def load_img_seq_dask():
     imread = dask.delayed(io.imread, pure=True)  # Lazy version of imread
-
     imgFiles = sorted(glob(sample_folder + 'TM*_CM*_CHN*.tif'))
     #start_time = time.time()
     lazy_images = [imread(img).astype('float32') for img in imgFiles]  # Lazily evaluate imread on each path
@@ -135,6 +135,63 @@ def simpleDNTensor(img, folder_name='../pixelwiseDenoising/gainMat20180208', pix
     return imgD
 
 
+def pixel_denoise_img_seq_multiple_save():
+    from fish_proc.utils import getCameraInfo
+    # from fish_proc.pixelwiseDenoising.simpleDenioseTool import simpleDN
+    from scipy.ndimage.filters import median_filter
+    from glob import glob
+    from skimage import io
+    import time  # --salma
+
+    save_folder = dat_folder + '10182018/Fish3-2/DataSample/using_100_samples/PixelDenoise'
+
+    cameraInfo = getCameraInfo.getCameraInfo(root_folder)
+    pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
+    pixel_x = (pixel_x0, pixel_x1)
+    pixel_y = (pixel_y0, pixel_y1)
+
+    imgStack = load_img_seq_dask()
+    # imgStack = load_img_seq()
+
+    offset = np.load(cameraNoiseMat + '/offset_mat.npy').astype('float32')
+    gain = np.load(cameraNoiseMat + '/gain_mat.npy').astype('float32')
+
+    offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+    gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+
+    ## simple denoise
+    start_time = time.time()
+    imgD = simpleDN(imgStack, offset=offset_, gain=gain_)
+    print("--- %s seconds for simple denoise CPU ---" % (time.time() - start_time))  # --salma
+
+    ## smooth dead pixels
+    win_ = 3
+    # start_time = time.time()  # --salma
+    imgDFiltered = daf.median_filter(imgD, size=(1, win_, win_))
+    imgDFiltered = imgDFiltered.compute()  # - compute here before saving
+    # imgDFiltered = median_filter(imgD,  size=(1, win_, win_))
+    # print("--- %s seconds for median filter dask ---" % (time.time() - start_time))  # --salma
+    # np.save(fishName+'/imgDNoMotion', imgD_)
+    # split the filtered image into multiple images before saving
+    start_time = time.time()  # --salma
+    n_splits = imgDFiltered.shape[0] // 50
+    imgDFilteredSplit = np.split(imgDFiltered, n_splits)
+    delayed_imsave = dask.delayed(io.imsave, pure=True)  # Lazy version of imsave
+    lazy_images = [delayed_imsave(save_folder+'/imgDNoMotion'+'%04d'%index +'.tif', img, compress=1) for index, img in enumerate(imgDFilteredSplit)]  # Lazily evaluate imsave on each path
+    dask.compute(*lazy_images)
+    Path(save_folder + '/finished_pixel_denoise.tmp').touch()
+    print("--- %s seconds for save dask ---" % (time.time() - start_time))  # --salma
+
+
+    t_ = len(imgDFiltered) // 2
+    win_ = 150
+
+    fix_ = imgDFiltered[t_ - win_:t_ + win_].mean(axis=0)
+    # fix_ = da.mean(imgDFiltered[t_ - win_:t_ + win_], axis=0)
+    # fix_ = dask.compute(fix_)
+    np.save(save_folder + '/motion_fix', fix_)
+
+
 def pixel_denoise_img_seq():
     from fish_proc.utils import getCameraInfo
     #from fish_proc.pixelwiseDenoising.simpleDenioseTool import simpleDN
@@ -142,6 +199,7 @@ def pixel_denoise_img_seq():
     from glob import glob
     from skimage import io
     import time  # --salma
+
 
     cameraInfo = getCameraInfo.getCameraInfo(root_folder)
     pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
@@ -153,6 +211,7 @@ def pixel_denoise_img_seq():
 
     offset = np.load(cameraNoiseMat +'/offset_mat.npy').astype('float32')
     gain = np.load(cameraNoiseMat +'/gain_mat.npy').astype('float32')
+
 
     offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
     gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
@@ -172,7 +231,9 @@ def pixel_denoise_img_seq():
     #print("--- %s seconds for median filter dask ---" % (time.time() - start_time))  # --salma
 
     # np.save(fishName+'/imgDNoMotion', imgD_)
+    start_time = time.time()
     io.imsave(save_folder+'imgDNoMotion.tif', imgDFiltered, compress=1)
+    print("--- %s seconds for save ---" % (time.time() - start_time))  # --salma
 
     t_ = len(imgDFiltered) // 2
     win_ = 150
@@ -180,7 +241,7 @@ def pixel_denoise_img_seq():
     fix_ = imgDFiltered[t_ - win_:t_ + win_].mean(axis=0)
     #fix_ = da.mean(imgDFiltered[t_ - win_:t_ + win_], axis=0)
     #fix_ = dask.compute(fix_)
-    np.save(save_folder + '/motion_fix_', fix_)
+    np.save(save_folder + '/motion_fix', fix_)
 
 
 def pixel_denoise_img_seq_Tensor():
@@ -228,7 +289,7 @@ def pixel_denoise_img_seq_Tensor():
     fix_ = imgDFiltered[t_ - win_:t_ + win_].mean(axis=0)
     #fix_ = da.mean(imgDFiltered[t_ - win_:t_ + win_], axis=0)
 
-    np.save(save_folder + '/motion_fix_', fix_)
+    np.save(save_folder + '/motion_fix', fix_)
 
 ## python Dask_load_image_test
 if __name__ == '__main__':
@@ -240,5 +301,6 @@ if __name__ == '__main__':
     else:
         start_time = time.time()
         #pixel_denoise_img_seq()
-        pixel_denoise_img_seq_Tensor()
-        print("--- %s seconds for pixel_denoise: tensor ---" % (time.time() - start_time))
+        #pixel_denoise_img_seq_Tensor()
+        pixel_denoise_img_seq_multiple_save()
+        print("--- %s seconds for pixel_denoise: multiple save ---" % (time.time() - start_time))
