@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 import os
 from scipy.stats import norm
+from scipy.sparse.linalg import svds
 from sklearn.utils.extmath import randomized_svd
 from sklearn import preprocessing
 import cvxpy as cp
@@ -308,7 +309,13 @@ def compute_svd(M,
 
     if method == 'vanilla':
         try:
-            U, s, Vt = np.linalg.svd(M, full_matrices=False)
+            #U, s, Vt = np.linalg.svd(M, full_matrices=False)
+            #salma use the scipy version it is more stable and faster
+            #U, s, Vt = sp.linalg.svd(M, full_matrices=False) # Here the default of n_components = min(d, T)
+            # Use sparsity: You can add maxiter to limit the number of iterations. Here the n_components = 6 by default
+            # used when all the components in a dense matrix is not needed
+            U, s, Vt = sp.sparse.linalg.svds(M) # You can add maxiter to limit the number of iterations
+
         except:
             print('SVD did not converge -- using truncted PCA at 2 components instead')
             if not os.path.isdir('SVD_error'):
@@ -502,11 +509,13 @@ def denoise_patch(M,
         ranks = np.nan
     #ranks = np.where(np.logical_or(vtids[0, :] >= 1, vtids[1, :] == 1))[0]
     if np.all(ranks == np.nan):
-        print('M rank Empty')
+        #salma comment the print
+        #print('M rank Empty')
         rlen = 0
     else:
         rlen = vtids[0,ranks].sum() #len(ranks)
-        print('\tM\trank: %d\trun_time: %f'%(rlen,time.time()-start))
+        #salma comment the print
+        #print('\tM\trank: %d\trun_time: %f'%(rlen,time.time()-start))
     return Yd, rlen
 
 
@@ -1077,7 +1086,13 @@ def denoise_components(data_all,
         #data0 = spatial_decimation(data0, ds, dims)
         data0 = data0.copy()
     # Run svd
+    #salma check the sparsity of the matrix
+    # start = time.time()
+    # sparsedata = sp.sparse.issparse(data0)
+    # print('---check sparsity:%r -  %f' % (sparsedata, time.time() - start))
+    #start = time.time()
     U, s, Vt = compute_svd(data0.T, method=pca_method)
+    #print('---compute svd time: %f' % (time.time() - start))
 
     # Project back if temporally filtered or downsampled
     if tfilt or tsub > 1:
