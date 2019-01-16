@@ -23,8 +23,8 @@ from os.path import exists
 dat_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/ProcessedData/'
 cameraNoiseMat = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/gainMat/gainMat20180208'
 root_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/10182018/Fish3-2/'
-save_folder = dat_folder + '10182018/Fish3-2/DataSample/using_100_samples/'
-#save_folder = dat_folder + '10182018/Fish3-2/Data/backup_before_improvements/'   #All samples
+#save_folder = dat_folder + '10182018/Fish3-2/DataSample/using_100_samples/'
+save_folder = dat_folder + '10182018/Fish3-2/Data/'   #All samples
 sample_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/10182018/Fish3-2/test_sample/'  # Currently 20 samples
 
 
@@ -90,7 +90,7 @@ def video_detrend():
 
             start_time = time.time()
             Y = imread(save_folder+'/imgDMotion.tif').astype('float32')
-            print(Y.shape[0])
+            print(Y.shape)
             print("--- %s seconds for read---" % (time.time() - start_time))
 
             #Y = Y.reshape(Y.shape[0], Y.shape[2], Y.shape[3]) # Just in the testing part
@@ -165,6 +165,8 @@ def video_detrend_multiple():
             Y.append(np.load(save_folder_Detrend+'/Y_d1.npy').astype('float32'))
             print("--- %s seconds for loading 1 and 2---" % (time.time() - start_time))
             Y = np.concatenate(Y, axis=0).astype('float32')
+            #salma save the npy. It is needed for localPCA
+            np.save(f'{save_folder_Detrend}/Y_d.npy', Y)
             print("--- %s seconds for concat---" % (time.time() - start_time))
 
             # multiple save
@@ -199,6 +201,6 @@ if __name__ == '__main__':
         eval(sys.argv[1]+f"({ext})")
     else:
         start_time = time.time()
-        #video_detrend()
-        video_detrend_multiple()
+        video_detrend()
+        #video_detrend_multiple()
         print("--- %s seconds for video detrend---" % (time.time() - start_time))
