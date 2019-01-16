@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 import os, sys
 from fish_proc.utils.memory import get_process_memory, clear_variables
+import time
+from pathlib import Path
+
 
 dat_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/ProcessedData/'
 cameraNoiseMat = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/gainMat/gainMat20180208'
@@ -83,6 +86,66 @@ def swim():
     return None
 
 
+# def pixel_denoise():
+#     '''
+#     Process pixel denoise
+#     Generate files -- imgDNoMotion.tif, motion_fix_.npy
+#     '''
+#     from fish_proc.pipeline.preprocess_dask import pixel_denoise, pixel_denoise_img_seq
+#     import time   #--salma
+#     import dask.array as da
+#
+#     start_time_init = time.time()
+#     dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
+#     dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
+#     for index, row in dat_xls_file.iterrows():
+#         folder = row['folder']
+#         fish = row['fish']
+#         image_folder = row['rootDir'] + f'{folder}/{fish}/'
+#         fish_folder = dat_folder + f'{folder}/{fish}/'
+#         save_folder = dat_folder + f'{folder}/{fish}/Data/backup_after_improvements/'
+#
+#         if os.path.exists(image_folder):
+#             print(f'checking file {folder}/{fish}')
+#             if not os.path.exists(save_folder+'/'):
+#                 os.makedirs(save_folder)
+#             if os.path.exists(save_folder + 'imgDNoMotionDask.tif'):
+#                 continue
+#             if not os.path.isfile(save_folder + 'motion_fix_dask.npy'):
+#                 print(f'process file {folder}/{fish}')
+#                 try:
+#                     if os.path.exists(image_folder+'Registered/raw.tif'):
+#                         imgD_ = pixel_denoise(image_folder, 'Registered/raw.tif', save_folder, cameraNoiseMat, plot_en=False)
+#                     else:
+#                         start_time = time.time()  # --salma
+#                         imgD_ = pixel_denoise_img_seq(image_folder, save_folder, cameraNoiseMat, plot_en=False)
+#                         print("--- %s seconds for pixel denoising function ---" % (time.time() - start_time)) # --salma
+#                     #start_time = time.time() # --salma
+#                     t_ = len(imgD_)//2
+#                     win_ = 150
+#
+#                     start_time = time.time()
+#                     fix_ = imgD_[t_ - win_:t_ + win_].mean(axis=0)
+#                     #fix_ = da.mean(imgD_[t_-win_:t_+win_], axis=0)
+#                     print("--- %s seconds for fix mean ---" % (time.time() - start_time)) # --salma
+#
+#                     start_time = time.time()
+#                     np.save(save_folder + '/motion_fix_dask', fix_)
+#                     print("--- %s seconds for saving motionfix ---" % (time.time() - start_time)) # --salma
+#
+#
+#                     #get_process_memory(); #--salma commented this out
+#                     imgD_ = None
+#                     fix_ = None
+#                     clear_variables((imgD_, fix_))
+#                     #print("--- %s seconds for saving motion_fix and clearning variables ---" % (time.time() - start_time))  # --salma
+#
+#                 except MemoryError as err:
+#                     print(f'Memory Error on file {folder}/{fish}: {err}')
+#     print("--- %s seconds for pixel denoise ---" % (time.time() - start_time_init))  # --salma
+#     return None
+
+
 def pixel_denoise():
     '''
     Process pixel denoise
@@ -100,22 +163,24 @@ def pixel_denoise():
         fish = row['fish']
         image_folder = row['rootDir'] + f'{folder}/{fish}/'
         fish_folder = dat_folder + f'{folder}/{fish}/'
-        save_folder = dat_folder + f'{folder}/{fish}/Data/backup_after_improvements/'
+        save_folder = dat_folder + f'{folder}/{fish}/Data/'
+
+        save_folder_PixelDenoise = save_folder + 'PixelDenoise/'
 
         if os.path.exists(image_folder):
             print(f'checking file {folder}/{fish}')
-            if not os.path.exists(save_folder+'/'):
-                os.makedirs(save_folder)
-            if os.path.exists(save_folder + 'imgDNoMotionDask.tif'):
+            if not os.path.exists(save_folder_PixelDenoise):
+                os.makedirs(save_folder_PixelDenoise)
+            if os.path.exists(save_folder_PixelDenoise + 'finished_pixel_denoise.tmp'):
                 continue
-            if not os.path.isfile(save_folder + 'motion_fix_dask.npy'):
+            if not os.path.isfile(save_folder_PixelDenoise + 'motion_fix.npy'):
                 print(f'process file {folder}/{fish}')
                 try:
                     if os.path.exists(image_folder+'Registered/raw.tif'):
                         imgD_ = pixel_denoise(image_folder, 'Registered/raw.tif', save_folder, cameraNoiseMat, plot_en=False)
                     else:
                         start_time = time.time()  # --salma
-                        imgD_ = pixel_denoise_img_seq(image_folder, save_folder, cameraNoiseMat, plot_en=False)
+                        imgD_ = pixel_denoise_img_seq(image_folder, save_folder_PixelDenoise, cameraNoiseMat, plot_en=False)
                         print("--- %s seconds for pixel denoising function ---" % (time.time() - start_time)) # --salma
                     #start_time = time.time() # --salma
                     t_ = len(imgD_)//2
@@ -123,24 +188,27 @@ def pixel_denoise():
 
                     start_time = time.time()
                     fix_ = imgD_[t_ - win_:t_ + win_].mean(axis=0)
-                    #fix_ = da.mean(imgD_[t_-win_:t_+win_], axis=0)
                     print("--- %s seconds for fix mean ---" % (time.time() - start_time)) # --salma
 
                     start_time = time.time()
-                    np.save(save_folder + '/motion_fix_dask', fix_)
+                    np.save(save_folder_PixelDenoise + '/motion_fix', fix_)
                     print("--- %s seconds for saving motionfix ---" % (time.time() - start_time)) # --salma
-
 
                     #get_process_memory(); #--salma commented this out
                     imgD_ = None
                     fix_ = None
                     clear_variables((imgD_, fix_))
                     #print("--- %s seconds for saving motion_fix and clearning variables ---" % (time.time() - start_time))  # --salma
+                    Path(save_folder_PixelDenoise + '/finished_pixel_denoise.tmp').touch()
 
                 except MemoryError as err:
                     print(f'Memory Error on file {folder}/{fish}: {err}')
     print("--- %s seconds for pixel denoise ---" % (time.time() - start_time_init))  # --salma
     return None
+
+
+
+
 
 
 def registration(is_largefile=True):
@@ -217,7 +285,11 @@ def registration(is_largefile=True):
                 ######################## Registration using batch #############################
 
                 batches = []
+                n_split = min(imgD.shape[0] // mp.cpu_count(), 8)
+                if n_split <= 1:
+                    n_split = 2
 
+                #for img_split in np.array_split(imgD, n_split, axis=0): # takes too much time
                 for img_frame in range(0, len(imgD), 100):  # in steps of 100
                     result_batch = dask.delayed(batch_motion_correction)(imgD[img_frame: img_frame + 100], fix)
                     batches.append(result_batch)
@@ -238,6 +310,7 @@ def registration(is_largefile=True):
                         time.time() - start_time))
 
                 imgDMotion = np.array(imgDMotion, dtype=np.float32)
+                imgDMotion = imgDMotion.reshape(imgDMotion.shape[0], imgDMotion.shape[2], imgDMotion.shape[3])
                 imsave(save_folder + '/imgDMotion.tif', imgDMotion, compress=1)
                 np.save(save_folder + '/imgDMotionVar', imgDMotionVar)
 
@@ -246,6 +319,11 @@ def registration(is_largefile=True):
 
                 Path(save_folder + '/finished_registr.tmp').touch()
 
+
+                print("--- %s seconds for registration_elementwise after save---" % (
+                        time.time() - start_time))
+                return None
+
             print("--- %s seconds for registration_elementwise after save---" % (
                     time.time() - start_time))
 
@@ -253,6 +331,133 @@ def registration(is_largefile=True):
         else:
             print("file not found")
     return None
+
+
+def registration(is_largefile=True):
+    '''
+    Generate imgDMotion.tif
+    '''
+    from pathlib import Path
+    from fish_proc.pipeline.preprocess_dask import motion_correction_element, batch_motion_correction
+    from skimage.io import imread, imsave
+    import multiprocessing as mp
+    import dask.bag as db
+    import dask
+    import time
+
+    dat_xls_file = pd.read_csv('./Voltron_Log_DRN_Exp.csv', index_col=0)
+    dat_xls_file['folder'] = dat_xls_file['folder'].apply(lambda x: f'{x:0>8}')
+
+    start_time = time.time()
+
+    ### TODO: Change the design to dask.delayed (batch_dim method) as in the test file
+    for index, row in dat_xls_file.iterrows():
+        folder = row['folder']
+        fish = row['fish']
+        save_folder = dat_folder + f'{folder}/{fish}/Data'
+
+        print(f'checking file {folder}/{fish}')
+        if not os.path.isfile(save_folder+'/imgDMotionDask.tif') and os.path.isfile(save_folder + '/motion_fix_dask.npy'):
+            if not os.path.isfile(save_folder+'/proc_registr.tmp'):
+                Path(save_folder+'/proc_registr.tmp').touch()
+                print(f'process file {folder}/{fish}')
+
+                imgD = imread(save_folder+'/imgDNoMotionDask.tif').astype('float32')
+                print("--- %s seconds for image read ---" % (
+                        time.time() - start_time))
+                fix = np.load(save_folder + '/motion_fix_dask.npy').astype('float32')
+
+                ######################## Registration using bag #############################
+                # len_D = len(imgD) // 2
+                #
+                # num_partitions = mp.cpu_count()
+                # print("registration batch into: " + str(num_partitions))
+                # batch1 = db.from_sequence(imgD[:len_D], npartitions=num_partitions)
+                # #batch1 = db.from_sequence(imgD[:len_D])
+                # batch1 = batch1.map(motion_correction_element, fix)
+                #
+                # batch2 = db.from_sequence(imgD[len_D:], npartitions=num_partitions)
+                # #batch2 = db.from_sequence(imgD[len_D:])
+                # batch2 = batch2.map(motion_correction_element, fix)
+                #
+                # result1 = batch1.compute()
+                # result2 = batch2.compute()
+                #
+                # print("--- %s seconds for registration_elementwise before zip---" % (
+                #         time.time() - start_time))
+                #
+                # imgDMotion1, imgDMotionVar1 = zip(*result1)
+                # imgDMotion2, imgDMotionVar2 = zip(*result2)
+                #
+                # imgDMotion = np.concatenate((imgDMotion1, imgDMotion2), axis=0)
+                # imgDMotionVar = np.concatenate((imgDMotionVar1, imgDMotionVar2), axis=0)
+                #
+                # print("--- %s seconds for registration_elementwise before save---" % (
+                #         time.time() - start_time))
+                #
+                # imgDMotion = np.array(imgDMotion, dtype=np.float32)
+                # imsave(save_folder + '/imgDMotion.tif', imgDMotion, compress=1)
+                #
+                # np.save(save_folder + '/imgDMotionVar', imgDMotionVar)
+                #
+                # imgDMotion = None
+                # imgDMotionVar = None
+                #
+                # Path(save_folder + '/finished_registr.tmp').touch()
+
+                ######################## Registration using batch #############################
+
+                batches = []
+                n_split = min(imgD.shape[0] // mp.cpu_count(), 8)
+                if n_split <= 1:
+                    n_split = 2
+
+                #for img_split in np.array_split(imgD, n_split, axis=0): # takes too much time
+                for img_frame in range(0, len(imgD), 100):  # in steps of 100
+                    result_batch = dask.delayed(batch_motion_correction)(imgD[img_frame: img_frame + 100], fix)
+                    batches.append(result_batch)
+
+                result = dask.compute(*batches)
+
+                print("--- %s seconds for registration batch before flaten---" % (
+                        time.time() - start_time))
+
+                flat_list = [item for sublist in result for item in sublist]
+
+                print("--- %s seconds for registration_elementwise before zip---" % (
+                        time.time() - start_time))
+
+                imgDMotion, imgDMotionVar = zip(*flat_list)
+
+                print("--- %s seconds for registration_elementwise before save---" % (
+                        time.time() - start_time))
+
+                imgDMotion = np.array(imgDMotion, dtype=np.float32)
+                imgDMotion = imgDMotion.reshape(imgDMotion.shape[0], imgDMotion.shape[2], imgDMotion.shape[3])
+                imsave(save_folder + '/imgDMotion.tif', imgDMotion, compress=1)
+                np.save(save_folder + '/imgDMotionVar', imgDMotionVar)
+
+                imgDMotion = None
+                imgDMotionVar = None
+
+                Path(save_folder + '/finished_registr.tmp').touch()
+
+
+                print("--- %s seconds for registration_elementwise after save---" % (
+                        time.time() - start_time))
+                return None
+
+            print("--- %s seconds for registration_elementwise after save---" % (
+                    time.time() - start_time))
+
+            Path(save_folder+'/finished_registr.tmp').touch()
+        else:
+            print("file not found")
+    return None
+
+
+
+
 
 
 def video_detrend():
@@ -266,7 +471,7 @@ def video_detrend():
     for index, row in dat_xls_file.iterrows():
         folder = row['folder']
         fish = row['fish']
-        save_folder = dat_folder + f'{folder}/{fish}/Data'
+        save_folder = dat_folder + f'{folder}/{fish}/Data/backup_before_improvements/'
         print(f'checking file {folder}/{fish}')
         if os.path.isfile(save_folder+'/finished_detrend.tmp'):
             continue
@@ -274,25 +479,47 @@ def video_detrend():
         if not os.path.isfile(save_folder+'/Y_d.tif') and not os.path.isfile(save_folder+'/proc_detrend.tmp'):
             if os.path.isfile(save_folder+'/finished_registr.tmp'):
                 Path(save_folder+'/proc_detrend.tmp').touch()
+
+                start_time = time.time()
                 Y = imread(save_folder+'/imgDMotion.tif').astype('float32')
+                print("--- %s seconds for read---" % (time.time() - start_time))
+
+                start_time = time.time()
                 Y = Y.transpose([1,2,0])
+                print("--- %s seconds for transpose---" % (time.time() - start_time))
+
                 n_split = min(Y.shape[0]//cpu_count(), 8)
                 if n_split <= 1:
                     n_split = 2
                 Y_len = Y.shape[0]//2
+                start_time = time.time()
                 detrend(Y[:Y_len, :, :], save_folder, n_split=n_split//2, ext='0')
+                print("--- %s seconds for detrend1---" % (time.time() - start_time))
+
+                start_time = time.time()
                 detrend(Y[Y_len:, :, :], save_folder, n_split=n_split//2, ext='1')
+                print("--- %s seconds for detrend2---" % (time.time() - start_time))
+
                 Y = None
                 clear_variables(Y)
-                get_process_memory();
+                get_process_memory()
                 Y = []
+                start_time = time.time()
                 Y.append(np.load(save_folder+'/Y_d0.npy').astype('float32'))
                 Y.append(np.load(save_folder+'/Y_d1.npy').astype('float32'))
+                print("--- %s seconds for append---" % (time.time() - start_time))
+
+                start_time = time.time()
                 Y = np.concatenate(Y, axis=0).astype('float32')
+                print("--- %s seconds for concat---" % (time.time() - start_time))
+
+                start_time = time.time()
                 imsave(save_folder+'/Y_d.tif', Y, compress=1)
+                print("--- %s seconds for save---" % (time.time() - start_time))
+
                 Y = None
                 clear_variables(Y)
-                get_process_memory();
+                get_process_memory()
                 os.remove(save_folder+'/Y_d0.npy')
                 os.remove(save_folder+'/Y_d1.npy')
                 # os.remove(save_folder+'/Y_trend0.npy')
@@ -617,5 +844,6 @@ if __name__ == '__main__':
         eval(sys.argv[1]+f"({ext})")
     else:
         #monitor_process()
-        #pixel_denoise()
-        registration()
+        pixel_denoise()
+        #registration()
+        #video_detrend()
