@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import os, sys
 from fish_proc.utils.memory import get_process_memory, clear_variables
+import time
 
 dat_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/ProcessedData/'
 cameraNoiseMat = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/gainMat/gainMat20180208'
@@ -124,7 +125,7 @@ def pixel_denoise():
                     t_ = len(imgD_)//2
                     win_ = 150
                     fix_ = imgD_[t_-win_:t_+win_].mean(axis=0)
-                    np.save(save_folder + '/motion_fix_', fix_)
+                    np.save(save_folder + '/motion_fix', fix_)
                     #get_process_memory(); #--salma commented this out
                     imgD_ = None
                     fix_ = None
@@ -155,7 +156,7 @@ def registration(is_largefile=True):
         fish = row['fish']
         save_folder = dat_folder + f'{folder}/{fish}/Data/backup_before_improvements'
         print(f'checking file {folder}/{fish}')
-        if not os.path.isfile(save_folder+'/imgDMotion.tif') and os.path.isfile(save_folder + '/motion_fix_.npy'):
+        if not os.path.isfile(save_folder+'/imgDMotion.tif') and os.path.isfile(save_folder + '/motion_fix.npy'):
             if not os.path.isfile(save_folder+'/proc_registr.tmp'):
                 Path(save_folder+'/proc_registr.tmp').touch()
                 print(f'process file {folder}/{fish}')
@@ -165,7 +166,7 @@ def registration(is_largefile=True):
                 print("--- %s seconds for loading imgDNoMotion.tiff ---" % (time.time() - start_time))  # --salma
 
                 start_time = time.time()
-                fix_ = np.load(save_folder + '/motion_fix_.npy').astype('float32')
+                fix_ = np.load(save_folder + '/motion_fix.npy').astype('float32')
                 print("--- %s seconds for loading motion_fix_.tiff ---" % (time.time() - start_time))  # --salma
 
                 if is_largefile:
@@ -228,6 +229,7 @@ def video_detrend():
                 Path(save_folder+'/proc_detrend.tmp').touch()
                 Y = imread(save_folder+'/imgDMotion.tif').astype('float32')
                 print(Y.shape)
+
                 Y = Y.transpose([1,2,0])
                 n_split = min(Y.shape[0]//cpu_count(), 8)
                 if n_split <= 1:
@@ -287,7 +289,7 @@ def local_pca():
                 Y_d_ave = None
                 Y_d_std = None
                 clear_variables((Y_d_ave, Y_d_std))
-                get_process_memory();
+                get_process_memory()
 
                 for n, Y_d_ in enumerate(np.array_split(Y_d, 10, axis=-1)):
                     denose_2dsvd(Y_d_, save_folder, ext=f'{n}')
@@ -563,6 +565,7 @@ def demix_middle_data_with_mask(row, ext=''):
 
 
 if __name__ == '__main__':
+    start_time = time.time()
     if len(sys.argv)>1:
         ext = ''
         if len(sys.argv)>2:
@@ -570,3 +573,4 @@ if __name__ == '__main__':
         eval(sys.argv[1]+f"({ext})")
     else:
         monitor_process()
+    print("--- %s total seconds---" % (time.time() - start_time))
