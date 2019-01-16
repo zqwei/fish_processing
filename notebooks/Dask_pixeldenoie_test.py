@@ -182,7 +182,7 @@ def pixel_denoise_img_seq_multiple_save():
     Path(save_folder + '/finished_pixel_denoise.tmp').touch()
     print("--- %s seconds for save dask ---" % (time.time() - start_time))  # --salma
 
-
+    print(imgDFiltered.shape)
     t_ = len(imgDFiltered) // 2
     win_ = 150
 
@@ -190,6 +190,7 @@ def pixel_denoise_img_seq_multiple_save():
     # fix_ = da.mean(imgDFiltered[t_ - win_:t_ + win_], axis=0)
     # fix_ = dask.compute(fix_)
     np.save(save_folder + '/motion_fix', fix_)
+
 
 
 def pixel_denoise_img_seq():
