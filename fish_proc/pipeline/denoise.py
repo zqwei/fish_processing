@@ -21,7 +21,7 @@ def detrend(Y_, fishName, n_split = 1, ext=''):
     Y_split = None
     Y_trend = None
     clear_variables((Y_split, Y_, Y_trend))
-    get_process_memory();
+    get_process_memory()
     return None
 
 def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0, ext=''):
@@ -41,5 +41,5 @@ def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0,
     np.save(f'{fishName}/Y_2dsvd{ext}', Y_svd.astype('float32'))
     Y_svd = None
     clear_variables(Y_svd)
-    get_process_memory();
+    get_process_memory()
     return None
