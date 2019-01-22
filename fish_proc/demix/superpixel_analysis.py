@@ -7,9 +7,11 @@ import multiprocessing as mp
 from scipy.sparse import csr_matrix, issparse, triu, csc_matrix
 from scipy.stats import rankdata
 import scipy.ndimage
-import tensorflow as tf
+#import tensorflow as tf
 import dask
 import dask.array as da
+import _thread
+
 
 # ZW -- indicated the comments by Ziqiang Wei
 # email : weiz@janelia.hhmi.org
@@ -30,11 +32,6 @@ def threshold_data_dask(Yd, th=2):
     for i, array in enumerate(np.array_split(Yd,10, axis=0)):
          result_batch = dask.delayed(threshold_data)(array, th)
          batches.append(result_batch)
-          # Yd_median = np.median(array, axis=-1, keepdims=True)
-          # Yd_mad = np.median(abs(array - Yd_median), axis=-1, keepdims=True)
-          # Yt_array = array-(Yd_median + th*Yd_mad)
-          # Yt_array[Yt_array<0]=0
-          # Yt[i] = Yt_array
 
     Yt_dask = dask.compute(*batches)
     Yt = np.vstack(Yt_dask)
@@ -122,6 +119,92 @@ def threshold_data_dask(Yd, th=2):
 #     return connect_mat_1, idx, comps, permute_col
 
 
+def find_superpixel_dask(Yt, cut_off_point, length_cut):
+    dims = Yt.shape
+    print('Yt.shape: '+str(dims))
+    ref_mat = np.arange(np.prod(dims[:-1])).reshape(dims[:-1],order='F')
+
+    ######### calculate correlation ############
+    Yt_dask = da.from_array(Yt, chunks=({0:'auto', 1:'auto', 2:'auto'})) # auto chunking
+    print('Yt_dask dims: '+str(Yt_dask.shape))
+
+    w_mov = (Yt_dask.transpose(2,0,1) - da.mean(Yt_dask, axis=2)) / da.std(Yt_dask, axis=2)
+    w_mov[da.isnan(w_mov)] = 0
+
+    start_time = time.time()
+    rho_v = da.mean(da.multiply(w_mov[:, :-1, :], w_mov[:, 1:, :]), axis=0)
+    rho_h = da.mean(da.multiply(w_mov[:, :, :-1], w_mov[:, :, 1:]), axis=0)
+    rho_l = da.mean(da.multiply(w_mov[:, 1:, :-1], w_mov[:, :-1, 1:]), axis=0)
+    rho_r = da.mean(da.multiply(w_mov[:, :-1, :-1], w_mov[:, 1:, 1:]), axis=0)
+    print("matrix multiply numpy: "+str(time.time()-start_time))
+
+    # clean for memory leak
+    w_mov = None
+    clear_variables(w_mov)
+    # get correlation mats
+    start_time = time.time()
+    rho_v = da.concatenate([rho_v, np.zeros([1, rho_v.shape[1]])], axis=0)
+    rho_h = da.concatenate([rho_h, np.zeros([rho_h.shape[0],1])], axis=1)
+    rho_r = da.concatenate([rho_r, np.zeros([rho_r.shape[0],1])], axis=1)
+    rho_r = da.concatenate([rho_r, np.zeros([1, rho_r.shape[1]])], axis=0)
+    rho_l = da.concatenate([np.zeros([rho_l.shape[0],1]), rho_l], axis=1)
+    rho_l = da.concatenate([rho_l, np.zeros([1, rho_l.shape[1]])], axis=0)
+    print("get correlation mats numpy: " + str(time.time() - start_time))
+
+
+    ################## find pairs where correlation above threshold
+    start_time = time.time()
+    temp_v = da.where(rho_v > cut_off_point)
+    temp_v = dask.compute(*temp_v)
+    A_v = ref_mat[temp_v]
+    B_v = ref_mat[(temp_v[0] + 1, temp_v[1])]
+
+    temp_h = da.where(rho_h > cut_off_point)
+    temp_h = dask.compute(*temp_h)
+    A_h = ref_mat[temp_h]
+    B_h = ref_mat[(temp_h[0], temp_h[1] + 1)]
+
+    temp_l = da.where(rho_l > cut_off_point)
+    temp_l = dask.compute(*temp_l)
+    A_l = ref_mat[temp_l]
+    B_l = ref_mat[(temp_l[0] + 1, temp_l[1] - 1)]
+
+    temp_r = da.where(rho_r > cut_off_point)
+    temp_r = dask.compute(*temp_r)
+    A_r = ref_mat[temp_r]
+    B_r = ref_mat[(temp_r[0] + 1, temp_r[1] + 1)]
+    A = da.concatenate([A_v,A_h,A_l,A_r])
+    B = da.concatenate([B_v,B_h,B_l,B_r])
+
+    A = A.compute()
+    B = B.compute()
+    print("correlation above threshold: " + str(time.time() - start_time))
+
+    ########### form connected componnents #########
+    start_time = time.time()
+    G = nx.Graph()
+    G.add_edges_from(list(zip(A, B)))
+    comps=list(nx.connected_components(G))
+    connect_mat=np.zeros(np.prod(dims[:2]))
+    idx=0
+    for comp in comps:
+        if(len(comp) > length_cut):
+            idx = idx+1
+    #salme fix the seed
+    np.random.seed(0)
+    permute_col = np.random.permutation(idx)+1
+    ii=0
+    for comp in comps:
+        if(len(comp) > length_cut):
+            connect_mat[list(comp)] = permute_col[ii]
+            ii = ii+1
+    connect_mat_1 = connect_mat.reshape(dims[0],dims[1],order='F')
+    print("connected components: " + str(time.time() - start_time))
+
+    return connect_mat_1, idx, comps, permute_col
+
+
+
 def find_superpixel(Yt, cut_off_point, length_cut):
     # ZW -- this may take long time to compute according to size of matrix -- need to optimize
     dims = Yt.shape
@@ -194,6 +277,7 @@ def find_superpixel(Yt, cut_off_point, length_cut):
     return connect_mat_1, idx, comps, permute_col
 
 
+##TODO: dask the superpixel_3d
 def find_superpixel_3d(Yt, num_plane, cut_off_point, length_cut):
     # ZW -- this may take long time to compute according to size of matrix -- need to optimize
     dims = Yt.shape
@@ -331,7 +415,7 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
 
 
 #salma
-def spatial_temporal_ini_different_solver(Yt, comps, idx, length_cut, bg=False):
+def spatial_temporal_ini_mu_solver(Yt, comps, idx, length_cut, bg=False):
     """
     Apply rank-1-NMF to find spatial and temporal initialization for each superpixel in Yt.
     """
@@ -907,8 +991,6 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
                 # isequalnum = np.isclose(num_list, rlt_dask[4])
 
             else:
-                #debug
-                isequal = np.equal(rlt, rlt_dask)
                 print("no merge!")
 
             mask_a = (a>0)*1
@@ -1112,13 +1194,19 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             connect_mat_1, idx, comps, permute_col = find_superpixel_3d(Yt,num_plane,cut_off_point[ii],length_cut[ii])
         else:
             print("find superpixels!")
-            start_time = time.time()
-            connect_mat_1, idx, comps, permute_col = find_superpixel(Yt,cut_off_point[ii],length_cut[ii])
-            print("superpixel time: "+ str(time.time()-start_time))
+            # start_time = time.time()
+            # connect_mat_1, idx, comps, permute_col = find_superpixel(Yt,cut_off_point[ii],length_cut[ii])
+            # print("superpixel time: "+ str(time.time()-start_time))
 
             # start_time = time.time()
             # connect_mat_1_t, idx_t, comps_t, permute_col_t = find_superpixel_tensor(Yt, cut_off_point[ii], length_cut[ii])
             # print("superpixel time tensor: " + str(time.time() - start_time))
+
+            print("find superpixels!")
+            start_time = time.time()
+            connect_mat_1, idx, comps, permute_col = find_superpixel_dask(Yt, cut_off_point[ii], length_cut[ii])
+            print("superpixel time dask: " + str(time.time() - start_time))
+
 
             # isqualconnect_mat_1 = np.array_equal(connect_mat_1, connect_mat_1_t)
             # isqualidx = np.array_equal(idx, idx_t)
@@ -1142,10 +1230,10 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         start = time.time()
         print("rank 1 svd!")
         if ii > 0:
-            c_ini, a_ini, _, _ = spatial_temporal_ini_different_solver(Yt, comps, idx, length_cut[ii], bg=False)
+            c_ini, a_ini, _, _ = spatial_temporal_ini_mu_solver(Yt, comps, idx, length_cut[ii], bg=False)
         else:
-            c_ini, a_ini, ff, fb = spatial_temporal_ini_different_solver(Yt, comps, idx, length_cut[ii], bg=bg)
-        print("time spatial_temporal_ini solver cd: " + str(time.time()-start))
+            c_ini, a_ini, ff, fb = spatial_temporal_ini_mu_solver(Yt, comps, idx, length_cut[ii], bg=bg)
+        print("time spatial_temporal_ini solver: " + str(time.time()-start))
 
 
         unique_pix = np.asarray(np.sort(np.unique(connect_mat_1)),dtype="int")
