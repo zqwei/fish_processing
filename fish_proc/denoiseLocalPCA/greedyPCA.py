@@ -314,7 +314,7 @@ def compute_svd(M,
             #U, s, Vt = sp.linalg.svd(M, full_matrices=False) # Here the default of n_components = min(d, T)
             # Use sparsity: You can add maxiter to limit the number of iterations. Here the n_components = 6 by default
             # used when all the components in a dense matrix is not needed
-            U, s, Vt = sp.sparse.linalg.svds(M) # You can add maxiter to limit the number of iterations
+            U, s, Vt = sp.sparse.linalg.svds(M)  # You can add maxiter to limit the number of iterations
 
         except:
             print('SVD did not converge -- using truncted PCA at 2 components instead')
