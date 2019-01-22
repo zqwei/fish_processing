@@ -30,6 +30,9 @@ This is the data processing used for the calcium and voltage imaging
 * Brain states and change detections
 
 --------------------------
+## Brian atlas
+https://fishatlas.neuro.mpg.de/neurons/
+
 ## Extended -- Behavioral data
 
 ## Extended -- Single-cell RNA seq
