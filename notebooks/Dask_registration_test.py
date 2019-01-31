@@ -724,12 +724,12 @@ if __name__ == '__main__':
         #registration()
         #registration_batch()  # this is the chosen1
 
-        registration_batch_dim() # this is the chosen2 with multiple save and load
+        #registration_batch_dim() # this is the chosen2 with multiple save and load
 
         #registration_dask_array()
         #registration_bag()
 
-        #registration_multiple_images_MP()
+        registration_multiple_images_MP()
 
         #registration_batch_multiple_images()
 
