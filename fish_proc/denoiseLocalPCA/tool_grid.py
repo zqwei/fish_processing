@@ -196,7 +196,9 @@ def denoise_dx_tiles(W,
                      stim_knots=None,
                      stim_delta=200):
     dims = W.shape
+    start = time.time()
     W_ = split_image_into_blocks(W,nblocks=nblocks)
+    print('----- split image into blocks %f' % (time.time() - start))
     dW_,rank_W_ = run_single(W_,
                              maxlag=maxlag,
                              confidence=confidence,
@@ -205,13 +207,15 @@ def denoise_dx_tiles(W,
                              U_update=U_update,
                              min_rank=min_rank)
     dims_ = list(map(np.shape,dW_))
+    start = time.time()
     dW_ = combine_blocks(dims,dW_,list_order='C')
+    print('----- combine_blocks %f' % (time.time() - start))
     if dx ==1:
         return dW_, rank_W_
     W_ = None
     del W_
     dW_ = dW_.astype('float32')
-    get_process_memory();
+    #get_process_memory()
 
     W_rs, drs = offset_tiling(W,
                              nblocks=nblocks,
@@ -229,7 +233,7 @@ def denoise_dx_tiles(W,
     W_rs = None
     del W_rs
     dW_rs = dW_rs.astype('float32')
-    get_process_memory();
+    #get_process_memory()
 
     W_cs, dcs = offset_tiling(W,
                      nblocks=nblocks,
@@ -247,7 +251,7 @@ def denoise_dx_tiles(W,
     W_cs = None
     del W_cs
     dW_cs = dW_cs.astype('float32')
-    get_process_memory();
+    #get_process_memory();
 
     W_rcs, drcs = offset_tiling(W,
                       nblocks=nblocks,
@@ -265,7 +269,7 @@ def denoise_dx_tiles(W,
     W_rcs = None
     del W_rcs
     dW_rcs = dW_rcs.astype('float32')
-    get_process_memory();
+    #get_process_memory()
 
     if False:
         return nblocks, dW_, dW_rs, dW_cs, dW_rcs, dims_, dims_rs, dims_cs, dims_rcs
@@ -328,6 +332,66 @@ def combine_4xd(nblocks,dW_,dW_rs,dW_cs,dW_rcs,dims_,dims_rs,dims_cs,dims_rcs,pl
     return W_hat
 
 
+#salma
+def run_single_dask(Y,
+               maxlag=5,
+               confidence=0.999,
+               greedy=False,
+               fudge_factor=0.99,
+               mean_th_factor=1.15,
+               U_update=False,
+               min_rank=1,
+               stim_knots=None,
+               stim_delta=200):
+    """
+    Run denoiser in each movie in the list Y.
+    Inputs:
+    ------
+    Y:      list (number_movies,)
+            list of 3D movies, each of dimensions (d1,d2,T)
+            Each element in the list can be of different size.
+    Outputs:
+    --------
+    Yds:    list (number_movies,)
+            list of denoised 3D movies, each of same dimensions
+            as the corresponding input movie.input
+    vtids:  list (number_movies,)
+            rank or final number of components stored for each movie.
+    ------
+    """
+    import dask
+
+    start=time.time()
+
+    result = []
+    for patch in Y:
+        result_batch = dask.delayed(gpca.denoise_patch)(patch,
+                                                        maxlag=maxlag,
+                                                        confidence=confidence,
+                                                        greedy=greedy,
+                                                        fudge_factor=fudge_factor,
+                                                        mean_th_factor=mean_th_factor,
+                                                        U_update=U_update,
+                                                        min_rank=min_rank,
+                                                        stim_knots=stim_knots,
+                                                        stim_delta=stim_delta)
+
+
+        result.append(result_batch)
+
+    c_outs = dask.compute(*result)
+
+    print('Total run time: %f'%(time.time()-start))
+    Yds = [out_[0] for out_ in c_outs]
+    vtids = [out_[1] for out_ in c_outs]
+    vtids = np.asarray(vtids).astype('int')
+    c_outs = None
+    clear_variables(c_outs)
+    #get_process_memory();
+    return Yds,vtids
+
+
+
 def run_single(Y,
                maxlag=5,
                confidence=0.999,
@@ -354,14 +418,14 @@ def run_single(Y,
             rank or final number of components stored for each movie.
     ------
     """
-    get_process_memory();
+    #get_process_memory()
     cpu_count = multiprocessing.cpu_count()
     start=time.time()
     pool = multiprocessing.Pool(cpu_count)
     args=[[patch] for patch in Y]
     Y = None
     clear_variables(Y)
-    get_process_memory();
+    #get_process_memory()
     # define params in function
     c_outs = pool.starmap(partial(gpca.denoise_patch,
                                   maxlag=maxlag,
@@ -382,7 +446,7 @@ def run_single(Y,
     vtids = np.asarray(vtids).astype('int')
     c_outs = None
     clear_variables(c_outs)
-    get_process_memory();
+    #get_process_memory();
     return Yds,vtids
 
 
