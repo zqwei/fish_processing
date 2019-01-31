@@ -10,7 +10,6 @@ import scipy.ndimage
 #import tensorflow as tf
 import dask
 import dask.array as da
-import _thread
 
 
 # ZW -- indicated the comments by Ziqiang Wei
@@ -415,7 +414,7 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
 
 
 #salma
-def spatial_temporal_ini_mu_solver(Yt, comps, idx, length_cut, bg=False):
+def spatial_temporal_ini_solver(Yt, comps, idx, length_cut, solver, bg=False):
     """
     Apply rank-1-NMF to find spatial and temporal initialization for each superpixel in Yt.
     """
@@ -425,11 +424,11 @@ def spatial_temporal_ini_mu_solver(Yt, comps, idx, length_cut, bg=False):
     T = dims[-1]
     Yt_r = Yt.reshape(np.prod(dims[:-1]),T,order = "F")
     Yt_r = csr_matrix(Yt_r)
-    #change the numericaol solver to mu and fix the random seed
+    #change the numerical solver to mu and fix the random seed
     model = NMF(n_components=1,
                 init='custom',
                 random_state=0,
-                solver='mu')
+                solver=solver)
 
     U_mat = []
     V_mat = []
@@ -1193,7 +1192,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             print("3d data!")
             connect_mat_1, idx, comps, permute_col = find_superpixel_3d(Yt,num_plane,cut_off_point[ii],length_cut[ii])
         else:
-            print("find superpixels!")
+            #print("find superpixels!")
             # start_time = time.time()
             # connect_mat_1, idx, comps, permute_col = find_superpixel(Yt,cut_off_point[ii],length_cut[ii])
             # print("superpixel time: "+ str(time.time()-start_time))
@@ -1230,9 +1229,9 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         start = time.time()
         print("rank 1 svd!")
         if ii > 0:
-            c_ini, a_ini, _, _ = spatial_temporal_ini_mu_solver(Yt, comps, idx, length_cut[ii], bg=False)
+            c_ini, a_ini, _, _ = spatial_temporal_ini_solver(Yt, comps, idx, length_cut[ii], 'mu', bg=False)
         else:
-            c_ini, a_ini, ff, fb = spatial_temporal_ini_mu_solver(Yt, comps, idx, length_cut[ii], bg=bg)
+            c_ini, a_ini, ff, fb = spatial_temporal_ini_solver(Yt, comps, idx, length_cut[ii], 'mu', bg=bg)
         print("time spatial_temporal_ini solver: " + str(time.time()-start))
 
 
