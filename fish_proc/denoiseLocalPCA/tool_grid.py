@@ -194,7 +194,9 @@ def denoise_dx_tiles(W,
                      U_update=False,
                      min_rank=1,
                      stim_knots=None,
-                     stim_delta=200):
+                     stim_delta=200,
+                     pca_method='sparse',
+                     svds_ncomponents=10):
     dims = W.shape
     start = time.time()
     W_ = split_image_into_blocks(W,nblocks=nblocks)
@@ -205,7 +207,9 @@ def denoise_dx_tiles(W,
                              fudge_factor=fudge_factor,
                              mean_th_factor=mean_th_factor,
                              U_update=U_update,
-                             min_rank=min_rank)
+                             min_rank=min_rank,
+                             pca_method=pca_method,
+                             svds_ncomponents=svds_ncomponents)
     dims_ = list(map(np.shape,dW_))
     start = time.time()
     dW_ = combine_blocks(dims,dW_,list_order='C')
@@ -226,7 +230,9 @@ def denoise_dx_tiles(W,
                                  fudge_factor=fudge_factor,
                                  mean_th_factor=mean_th_factor,
                                  U_update=U_update,
-                                 min_rank=min_rank)
+                                 min_rank=min_rank,
+                                 pca_method=pca_method,
+                                 svds_ncomponents=svds_ncomponents)
     dims_rs = list(map(np.shape,dW_rs))
     dW_rs = combine_blocks(drs,dW_rs,list_order='C')
 
@@ -244,7 +250,9 @@ def denoise_dx_tiles(W,
                                  fudge_factor=fudge_factor,
                                  mean_th_factor=mean_th_factor,
                                  U_update=U_update,
-                                 min_rank=min_rank)
+                                 min_rank=min_rank,
+                                 pca_method=pca_method,
+                                 svds_ncomponents=svds_ncomponents)
     dims_cs = list(map(np.shape,dW_cs))
     dW_cs = combine_blocks(dcs,dW_cs,list_order='C')
 
@@ -262,7 +270,9 @@ def denoise_dx_tiles(W,
                              fudge_factor=fudge_factor,
                              mean_th_factor=mean_th_factor,
                              U_update=U_update,
-                             min_rank=min_rank)
+                             min_rank=min_rank,
+                             pca_method=pca_method,
+                             svds_ncomponents=svds_ncomponents)
     dims_rcs = list(map(np.shape,dW_rcs))
     dW_rcs = combine_blocks(drcs,dW_rcs,list_order='C')
 
@@ -332,66 +342,6 @@ def combine_4xd(nblocks,dW_,dW_rs,dW_cs,dW_rcs,dims_,dims_rs,dims_cs,dims_rcs,pl
     return W_hat
 
 
-#salma
-def run_single_dask(Y,
-               maxlag=5,
-               confidence=0.999,
-               greedy=False,
-               fudge_factor=0.99,
-               mean_th_factor=1.15,
-               U_update=False,
-               min_rank=1,
-               stim_knots=None,
-               stim_delta=200):
-    """
-    Run denoiser in each movie in the list Y.
-    Inputs:
-    ------
-    Y:      list (number_movies,)
-            list of 3D movies, each of dimensions (d1,d2,T)
-            Each element in the list can be of different size.
-    Outputs:
-    --------
-    Yds:    list (number_movies,)
-            list of denoised 3D movies, each of same dimensions
-            as the corresponding input movie.input
-    vtids:  list (number_movies,)
-            rank or final number of components stored for each movie.
-    ------
-    """
-    import dask
-
-    start=time.time()
-
-    result = []
-    for patch in Y:
-        result_batch = dask.delayed(gpca.denoise_patch)(patch,
-                                                        maxlag=maxlag,
-                                                        confidence=confidence,
-                                                        greedy=greedy,
-                                                        fudge_factor=fudge_factor,
-                                                        mean_th_factor=mean_th_factor,
-                                                        U_update=U_update,
-                                                        min_rank=min_rank,
-                                                        stim_knots=stim_knots,
-                                                        stim_delta=stim_delta)
-
-
-        result.append(result_batch)
-
-    c_outs = dask.compute(*result)
-
-    print('Total run time: %f'%(time.time()-start))
-    Yds = [out_[0] for out_ in c_outs]
-    vtids = [out_[1] for out_ in c_outs]
-    vtids = np.asarray(vtids).astype('int')
-    c_outs = None
-    clear_variables(c_outs)
-    #get_process_memory();
-    return Yds,vtids
-
-
-
 def run_single(Y,
                maxlag=5,
                confidence=0.999,
@@ -401,7 +351,9 @@ def run_single(Y,
                U_update=False,
                min_rank=1,
                stim_knots=None,
-               stim_delta=200):
+               stim_delta=200,
+               pca_method='sparse',
+               svds_ncomponents=10):
     """
     Run denoiser in each movie in the list Y.
     Inputs:
@@ -436,7 +388,9 @@ def run_single(Y,
                                   U_update=U_update,
                                   min_rank=min_rank,
                                   stim_knots=stim_knots,
-                                  stim_delta=stim_delta),
+                                  stim_delta=stim_delta,
+                                  pca_method=pca_method,
+                                  svds_ncomponents=svds_ncomponents),
                           args)
     pool.close()
     pool.join()
