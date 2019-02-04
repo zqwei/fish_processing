@@ -17,8 +17,9 @@ class ImAffine:
         self.verbosity = 0
         self.tx_mat = None
         self.params0 = None
-        
-        self.options = {'maxcor': 10, 'ftol': 1e-7, 'gtol': 1e-5, 'eps': 1e-8, 'maxiter': 1000, 'disp':True}
+
+        #change disp = false
+        self.options = {'maxcor': 10, 'ftol': 1e-7, 'gtol': 1e-5, 'eps': 1e-8, 'maxiter': 1000, 'disp':False}
         # ftol: The iteration stops when (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= ftol.
         # gtol: The iteration will stop when max{|proj g_i | i = 1, ..., n} <= gtol where pg_i is the i-th component of the projected gradient.
         # eps: Step size used for numerical approximation of the jacobian.
