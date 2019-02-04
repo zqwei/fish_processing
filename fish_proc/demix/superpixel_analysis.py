@@ -413,7 +413,6 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
     return V_mat, U_mat, bg_v, bg_u
 
 
-#salma
 def spatial_temporal_ini_solver(Yt, comps, idx, length_cut, solver, bg=False):
     """
     Apply rank-1-NMF to find spatial and temporal initialization for each superpixel in Yt.
@@ -1207,11 +1206,6 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             print("superpixel time dask: " + str(time.time() - start_time))
 
 
-            # isqualconnect_mat_1 = np.array_equal(connect_mat_1, connect_mat_1_t)
-            # isqualidx = np.array_equal(idx, idx_t)
-            # isqualcomps = np.array_equal(comps, comps_t)
-            # isequalpermute_col =  np.array_equal(permute_col, permute_col_t)
-
         #print("time: " + str(time.time()-start)) #salma commented this
 
         if idx==0:
@@ -1229,9 +1223,10 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         start = time.time()
         print("rank 1 svd!")
         if ii > 0:
-            c_ini, a_ini, _, _ = spatial_temporal_ini_solver(Yt, comps, idx, length_cut[ii], 'mu', bg=False)
+            # you can choose the solver to be 'mu' to use muliplicative update instead of coordinate descend
+            c_ini, a_ini, _, _ = spatial_temporal_ini_solver(Yt, comps, idx, length_cut[ii], 'cd', bg=False)
         else:
-            c_ini, a_ini, ff, fb = spatial_temporal_ini_solver(Yt, comps, idx, length_cut[ii], 'mu', bg=bg)
+            c_ini, a_ini, ff, fb = spatial_temporal_ini_solver(Yt, comps, idx, length_cut[ii], 'cd', bg=bg)
         print("time spatial_temporal_ini solver: " + str(time.time()-start))
 
 
