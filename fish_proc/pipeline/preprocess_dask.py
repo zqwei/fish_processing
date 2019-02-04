@@ -9,12 +9,20 @@ import dask.array as da
 import dask
 from skimage import io
 
-def load_img_seq_dask(image_folder):
+
+######################### Preprocess used in Pixel Denoise Step #############################
+
+######### Load multiple images in a folder in parallel (dask) ##########################
+def _load_img_seq_dask(image_folder):
     from glob import glob
+
+    """
+    desciption: Load sequence of images in parallel using dask
+    :return dask array of concatenated image sequence (not yet evaluated)
+    """
 
     imread = dask.delayed(io.imread, pure=True)  # Lazy version of imread
     imgFiles = sorted(glob(image_folder + 'TM*_CM*_CHN*.tif'))
-    #start_time = time.time()
     lazy_images = [imread(img).astype('float32') for img in imgFiles]  # Lazily evaluate imread on each path
 
     sample = lazy_images[0].compute()  # load the first image (assume rest are same shape/dtype)
@@ -25,15 +33,73 @@ def load_img_seq_dask(image_folder):
 
     imgStack = da.concatenate(arrays, axis=0).astype('float32')
     #imgStackDask = imgStack.compute() #- compute in the last step
-    #print("--- %s seconds for image stack creation: dask ---" % (time.time() - start_time))
     return imgStack
 
 
+######### Pixel denoise using image sequences and save image sequences ##########################
+def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
+    from ..utils import getCameraInfo
+    from ..pixelwiseDenoising.simpleDenioseTool import simpleDN_dask
+    import dask_ndfilters as daf
+    import time
 
+    """
+    description: Pixel denoise using image sequences and save image sequences
+    """
+
+    cameraInfo = getCameraInfo.getCameraInfo(folderName)
+    pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
+    pixel_x = (pixel_x0, pixel_x1)
+    pixel_y = (pixel_y0, pixel_y1)
+
+    imgStack = _load_img_seq_dask(folderName)
+
+    if plot_en:
+        plt.figure(figsize=(4, 3))
+        plt.imshow(imgStack[0], cmap='gray')
+        plt.savefig(fishName + '/Raw_frame_0.png')
+
+    offset = np.load(cameraNoiseMat +'/offset_mat.npy').astype('float32')
+    gain = np.load(cameraNoiseMat +'/gain_mat.npy').astype('float32')
+
+    offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+    gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+
+    ## simple denoise
+    start_time = time.time()  # --salma
+    imgD = simpleDN_dask(imgStack, offset=offset_, gain=gain_)
+    print("--- %s seconds for simple DN function ---" % (time.time() - start_time))
+
+    ### smooth dead pixels
+    win_ = 3
+    start_time = time.time()  # --salma
+    imgDFiltered = daf.median_filter(imgD,  size=(1, win_, win_))
+    imgDFiltered = imgDFiltered.compute() # - compute here before saving
+    print("--- %s seconds for median filter ---" % (time.time() - start_time))
+
+    # multiple save
+    start_time = time.time()
+    n_splits = imgDFiltered.shape[0] // 50
+    imgDFilteredSplit = np.split(imgDFiltered, n_splits)
+    delayed_imsave = dask.delayed(io.imsave, pure=True)  # Lazy version of imsave
+    lazy_images = [delayed_imsave(fishName + '/imgDNoMotion' + '%04d'%index + '.tif', img, compress=1) for index, img
+                   in enumerate(imgDFilteredSplit)]  # Lazily evaluate imsave on each path
+    dask.compute(*lazy_images)
+    print("--- %s seconds for save dask ---" % (time.time() - start_time))
+
+    if plot_en:
+        plt.figure(figsize=(4, 3))
+        plt.imshow(imgDFiltered[0], cmap='gray')
+        plt.savefig(fishName + '/Denoised_frame_0.png')
+
+    return imgDFiltered
+
+######### Pixel denoise using stacked image and return one image ##########################
 def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=False):
     from ..utils import getCameraInfo
     from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
+    from skimage import io
     from ..utils.memory import clear_variables
     import os
 
@@ -64,67 +130,7 @@ def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=Fal
     return imgD_
 
 
-#@profile  # --salma for memory profiling
-def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
-    from ..utils import getCameraInfo
-    from ..pixelwiseDenoising.simpleDenioseTool_dask import simpleDN
-    import dask_ndfilters as daf
-    import time  # --salma
-
-    cameraInfo = getCameraInfo.getCameraInfo(folderName)
-    pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
-    pixel_x = (pixel_x0, pixel_x1)
-    pixel_y = (pixel_y0, pixel_y1)
-
-    start_time = time.time()  # --salma
-    imgStack = load_img_seq_dask(folderName)
-    print("--- %s seconds for image stack creation ---" % (time.time() - start_time))  # --salma
-
-    if plot_en:
-        plt.figure(figsize=(4, 3))
-        plt.imshow(imgStack[0], cmap='gray')
-        plt.savefig(fishName + '/Raw_frame_0.png')
-
-    #start_time = time.time()  # --salma
-    offset = np.load(cameraNoiseMat +'/offset_mat.npy').astype('float32')
-    #print("--- %s seconds for loading offset data ---" % (time.time() - start_time))  # --salma
-    #start_time = time.time()  # --salma
-    gain = np.load(cameraNoiseMat +'/gain_mat.npy').astype('float32')
-    #print("--- %s seconds for loading gain data ---" % (time.time() - start_time))  # --salma
-    offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
-    gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
-
-    ## simple denoise
-    start_time = time.time()  # --salma
-    imgD = simpleDN(imgStack, offset=offset_, gain=gain_)
-    print("--- %s seconds for simple DN function ---" % (time.time() - start_time))  # --salma
-    ### smooth dead pixels
-
-    win_ = 3
-    start_time = time.time()  # --salma
-    imgDFiltered = daf.median_filter(imgD,  size=(1, win_, win_))
-    imgDFiltered = imgDFiltered.compute() # - compute here before saving
-    print("--- %s seconds for median filter ---" % (time.time() - start_time))  # --salma
-
-    start_time = time.time()  # --salma
-    #io.imsave(fishName+'/imgDNoMotionDask.tif', imgDFiltered, compress=1) #dask it
-    n_splits = imgDFiltered.shape[0] // 50
-    imgDFilteredSplit = np.split(imgDFiltered, n_splits)
-    delayed_imsave = dask.delayed(io.imsave, pure=True)  # Lazy version of imsave
-    lazy_images = [delayed_imsave(fishName + '/imgDNoMotion' + '%04d'%index + '.tif', img, compress=1) for index, img
-                   in enumerate(imgDFilteredSplit)]  # Lazily evaluate imsave on each path
-    dask.compute(*lazy_images)
-
-    print("--- %s seconds for save dask ---" % (time.time() - start_time))  # --salma
-
-    if plot_en:
-        plt.figure(figsize=(4, 3))
-        plt.imshow(imgDFiltered[0], cmap='gray')
-        plt.savefig(fishName + '/Denoised_frame_0.png')
-
-
-    return imgDFiltered
-
+######################### Preprocess used in Registration Step #############################
 ######### Registration bag helpers ##########################
 def rigid_stacks_element(move_frame, fix=None, trans=None):
 
