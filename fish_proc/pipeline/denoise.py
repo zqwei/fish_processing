@@ -36,8 +36,16 @@ def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0,
     mean_th_factor=1.15
     U_update=False
     min_rank=1
+    pca_method = 'sparse'
+    svds_ncomponents = 10
 
-    Y_svd, _ = svd_patch(Y_d, nblocks=nblocks, dx=dx, stim_knots=stim_knots, stim_delta=stim_delta)
+    Y_svd, _ = svd_patch(Y_d,
+                         nblocks=nblocks,
+                         dx=dx,
+                         stim_knots=stim_knots,
+                         stim_delta=stim_delta,
+                         pca_method=pca_method,
+                         svds_ncomponents = svds_ncomponents)
     np.save(f'{fishName}/Y_2dsvd{ext}', Y_svd.astype('float32'))
     Y_svd = None
     clear_variables(Y_svd)
