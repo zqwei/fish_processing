@@ -84,8 +84,8 @@ def demix_middle_data_with_mask_multiple(row, ext=''):
 
     save_folder_Registration =  save_folder + 'Registration/'
     save_folder_Detrend = save_folder + 'Detrend/'
-    save_folder_LocalPCA = save_folder + 'LocalPCA/divide5block5x5/svdsparse/'
-    save_folder_Demix = save_folder + 'Demix/divide5block5x5/svdsparse/'
+    save_folder_LocalPCA = save_folder + 'LocalPCA/divide10block10x10/svdsparse/10components/'
+    save_folder_Demix = save_folder + 'Demix/divide10block10x10/svdsparse/'
 
     sns.set(font_scale=2)
     sns.set_style("white")
@@ -94,7 +94,7 @@ def demix_middle_data_with_mask_multiple(row, ext=''):
     folder = row['folder']
     fish = row['fish']
 
-    save_image_folder = save_folder_Demix + '/Results'
+    save_image_folder = save_folder_Demix + '/ResultsMUsvds10'
     if not os.path.exists(save_image_folder):
         os.makedirs(save_image_folder)
     print('=====================================')
@@ -116,7 +116,7 @@ def demix_middle_data_with_mask_multiple(row, ext=''):
         ## TODO: Put this part in the localpca test
         # if not os.path.isfile(f'{save_folder_LocalPCA}/Y_svd.tif'):
         Y_svd = []
-        n_splits = 5
+        n_splits = 10
         for n_ in range(n_splits):
             Y_2dsvd =  np.load(f'{save_folder_LocalPCA}/Y_2dsvd{n_}.npy').astype('float32') # added for debugging
             Y_svd.append(Y_2dsvd)
@@ -169,7 +169,7 @@ def demix_middle_data_with_mask_multiple(row, ext=''):
         # get sparse data
         start_time = time.time()
         Y_d_std_ = Y_d_std[mask_save[0].min():mask_save[0].max(), mask_save[1].min():mask_save[1].max(), :]
-        mov_ = mov_*Y_d_std_ + np.random.normal(size=mov_.shape)*0.7
+        np.random.seed(0); mov_ = mov_*Y_d_std_ + np.random.normal(size=mov_.shape)*0.7
         mov_ = -mov_.astype('float32')
         mask_ = mask[mask_save[0].min():mask_save[0].max(), mask_save[1].min():mask_save[1].max()]
         mov_[mask_]=0
@@ -345,7 +345,7 @@ def demix_middle_data_with_mask(row, ext=''):
     start_time = time.time()
     Y_d_std_ = Y_d_std[mask_save[0].min():mask_save[0].max(), mask_save[1].min():mask_save[1].max(), :]
 
-    mov_ = mov_*Y_d_std_ + np.random.normal(size=mov_.shape)*0.7
+    np.random.seed(0); mov_ = mov_*Y_d_std_ + np.random.normal(size=mov_.shape)*0.7
     mov_ = -mov_.astype('float32')
     mask_ = mask[mask_save[0].min():mask_save[0].max(), mask_save[1].min():mask_save[1].max()]
     mov_[mask_]=0
