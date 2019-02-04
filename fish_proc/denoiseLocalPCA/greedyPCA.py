@@ -274,9 +274,10 @@ def vector_acov(Vt,
 
 
 def compute_svd(M,
-                method='randomized',
+                method='sparse',
                 n_components=2,
-               reconstruct=False):
+                svds_ncomponents=10,
+                reconstruct=False):
     """
     Decompose array M given parameters.
     asumme M has been mean_subtracted
@@ -288,7 +289,7 @@ def compute_svd(M,
                 input array to decompose
     method:     string
                 method to decompose M
-                ['vanilla','randomized']
+                ['vanilla','randomized','sparse']
     n_components: int
                 number of components to extract from M
                 if method='randomized'
@@ -310,21 +311,22 @@ def compute_svd(M,
     if method == 'vanilla':
         try:
             #U, s, Vt = np.linalg.svd(M, full_matrices=False)
-            #salma use the scipy version it is more stable and faster
-            #U, s, Vt = sp.linalg.svd(M, full_matrices=False) # Here the default of n_components = min(d, T)
-            # Use sparsity: You can add maxiter to limit the number of iterations. Here the n_components = 6 by default
-            # used when all the components in a dense matrix is not needed
-            U, s, Vt = sp.sparse.linalg.svds(M, 10)  # You can add maxiter to limit the number of iterations
-
+            #Use the scipy version it is more stable and faster
+            U, s, Vt = sp.linalg.svd(M, full_matrices=False) # Here the default of n_components = min(d, T)
         except:
             print('SVD did not converge -- using truncted PCA at 2 components instead')
             if not os.path.isdir('SVD_error'):
                 os.mkdir('SVD_error')
+            np.random.seed(0) # fix the seed
             np.save(f'SVD_error/SVD_matrix_id{int(random.random()*1e10)}', M)
-            U, s, Vt = randomized_svd(M, n_components=n_components)
+            U, s, Vt = randomized_svd(M, n_components=n_components, random_state=0) #fix the seed
     elif method == 'randomized':
         U, s, Vt = randomized_svd(M, n_components=n_components,
                 n_iter=7, random_state=None)
+    elif method == 'sparse':
+        # Use sparsity: You can add maxiter to limit the number of iterations. Here the n_components = 6 by default
+        # used when all the components in a dense matrix is not needed
+        U, s, Vt = sp.sparse.linalg.svds(M,  n_components=svds_ncomponents)
 
     if reconstruct:
         return U.dot(np.diag(s).dot(Vt))
@@ -407,6 +409,7 @@ def denoise_patch(M,
                   min_rank=1,
                   verbose=False,
                   pca_method='vanilla',
+                  svds_ncomponents=10,
                   stim_knots=None,
                   stim_delta=200):
     """
@@ -497,6 +500,7 @@ def denoise_patch(M,
                                    verbose=verbose,
                                    dims=dimsM,
                                    pca_method=pca_method,
+                                   svds_ncomponents=svds_ncomponents,
                                    stim_knots=stim_knots,
                                    stim_delta=stim_delta
                                   )
@@ -509,12 +513,10 @@ def denoise_patch(M,
         ranks = np.nan
     #ranks = np.where(np.logical_or(vtids[0, :] >= 1, vtids[1, :] == 1))[0]
     if np.all(ranks == np.nan):
-        #salma comment the print
         #print('M rank Empty')
         rlen = 0
     else:
         rlen = vtids[0,ranks].sum() #len(ranks)
-        #salma comment the print
         #print('\tM\trank: %d\trun_time: %f'%(rlen,time.time()-start))
     return Yd, rlen
 
@@ -970,6 +972,7 @@ def denoise_components(data_all,
                        U_update=False,
                        min_rank=0,
                        pca_method='vanilla',
+                       svds_ncomponents=10,
                        detrend=False,
                        stim_knots=None,
                        stim_delta=200):
@@ -1086,12 +1089,8 @@ def denoise_components(data_all,
         #data0 = spatial_decimation(data0, ds, dims)
         data0 = data0.copy()
     # Run svd
-    #salma check the sparsity of the matrix
-    # start = time.time()
-    # sparsedata = sp.sparse.issparse(data0)
-    # print('---check sparsity:%r -  %f' % (sparsedata, time.time() - start))
     #start = time.time()
-    U, s, Vt = compute_svd(data0.T, method=pca_method)
+    U, s, Vt = compute_svd(data0.T, method=pca_method, svds_ncomponents=svds_ncomponents)
     #print('---compute svd time: %f' % (time.time() - start))
 
     # Project back if temporally filtered or downsampled

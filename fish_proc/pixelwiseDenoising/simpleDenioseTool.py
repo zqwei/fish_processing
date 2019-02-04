@@ -2,6 +2,7 @@
 A simplified version of denoising tool
 
 @author: modified by Ziqiang Wei, Jan 2018
+@author: modified by Salma Elmalaki, Dec 2018
 
 """
 
@@ -11,8 +12,8 @@ from os.path import exists
 # from ..utils import np_mp # this should be fixed later
 
 def compute_gain_matrix(folder_name):
-    offsetMat = [];
-    varmat = [];
+    offsetMat = []
+    varmat = []
     for nfile in sorted(glob(folder_name + '/*.npz')):
         print(nfile)
         data = np.load(nfile)
@@ -76,6 +77,48 @@ def simpleDN(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=N
     imgD[np.broadcast_to(gain_ > 5, imgD.shape)] = 1e-6
     imgD[imgD <= 0] = 1e-6
     return imgD
+
+
+def simpleDN_dask(img, folder_name='../pixelwiseDenoising/gainMat20180208', pixel_x=None, pixel_y=None, offset=None, gain=None):
+    import dask.array as da
+
+    """
+    desciption: simple denoise of image
+    :param img: a dask array of image sequences
+    :return imgD: a dask array of denoised image sequences 
+    """
+    # crop gain and offset matrix to the img size
+    assert img.ndim<5 and img.ndim>1, 'Image should be of 2D or 3D or 4D'
+    # img should be in form of (t), (z), x, y
+    dim_offset = img.ndim - 2
+    if pixel_x is None:
+        pixel_x = (0, img.shape[dim_offset])
+    if pixel_y is None:
+        pixel_y = (0, img.shape[dim_offset+1])
+
+    # load gain and offset matrix
+    if offset is None:
+        assert exists(folder_name)
+        offset = np.load(folder_name +'/offset_mat.npy')
+    if gain is None:
+        gain = np.load(folder_name +'/gain_mat.npy')
+    offset_ = offset[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+    gain_ = gain[pixel_x[0]:pixel_x[1], pixel_y[0]:pixel_y[1]]
+    for _ in range(dim_offset):
+        offset_ = offset_[np.newaxis, :]
+        gain_ = gain_[np.newaxis, :]
+
+    print("img shape before computing: "+str(img.shape))
+    # compute processesed image
+    imgD = (img - offset_) / (gain_ + 1e-12)
+    #use dask
+    imgD[da.broadcast_to(gain_ < 0.5, imgD.shape)] = 1e-6
+    imgD[da.broadcast_to(gain_ > 5, imgD.shape)] = 1e-6
+    #imgD[np.broadcast_to(gain_ < 0.5, imgD.shape)] = 1e-6
+    #imgD[np.broadcast_to(gain_ > 5, imgD.shape)] = 1e-6
+    imgD[imgD <= 0] = 1e-6
+    return imgD
+
 
 def smoothDeadPixelBoxCar(img):
     from scipy.signal import convolve2d
