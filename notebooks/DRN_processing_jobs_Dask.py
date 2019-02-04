@@ -477,7 +477,7 @@ def demix_middle_data():
             clear_variables(Y_svd)
             get_process_memory();
 
-            mov_ = Y_svd_*Y_d_std + np.random.normal(size=Y_svd_.shape)*0.7
+            np.random.seed(0); mov_ = Y_svd_*Y_d_std + np.random.normal(size=Y_svd_.shape)*0.7
             Y_svd_ = None
             clear_variables(Y_svd_)
             Cn, _ = correlation_pnr(-mov_, gSig=None, remove_small_val=False, remove_small_val_th=3, center_psf=False)
@@ -631,7 +631,7 @@ def demix_middle_data_with_mask(row, ext=''):
 
         # get sparse data
         Y_d_std_ = Y_d_std[mask_save[0].min():mask_save[0].max(), mask_save[1].min():mask_save[1].max(), :]
-        mov_ = mov_*Y_d_std_ + np.random.normal(size=mov_.shape)*0.7
+        np.random.seed(0); mov_ = mov_*Y_d_std_ + np.random.normal(size=mov_.shape)*0.7
         mov_ = -mov_.astype('float32')
         mask_ = mask[mask_save[0].min():mask_save[0].max(), mask_save[1].min():mask_save[1].max()]
         mov_[mask_]=0
