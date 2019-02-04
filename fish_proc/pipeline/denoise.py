@@ -36,8 +36,10 @@ def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0,
     mean_th_factor=1.15
     U_update=False
     min_rank=1
-    pca_method = 'sparse'
-    svds_ncomponents = 10
+
+    pca_method = 'vanellia'  # You can choose "sparse" to activate sparse svd and then specify the number of comp
+
+    svds_ncomponents = 10    # Used if you choose "sparse" as a pca_method
 
     Y_svd, _ = svd_patch(Y_d,
                          nblocks=nblocks,
