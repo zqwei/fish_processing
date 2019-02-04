@@ -22,9 +22,9 @@ from os.path import exists
 dat_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/ProcessedData/'
 cameraNoiseMat = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/gainMat/gainMat20180208'
 root_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/10182018/Fish3-2/'
-save_folder = dat_folder + '10182018/Fish3-2/DataSample/using_100_samples/'
+#save_folder = dat_folder + '10182018/Fish3-2/DataSample/using_100_samples/'
 #save_folder = dat_folder + '10182018/Fish3-2/Data/backup_before_improvements/'    #All samples #regular
-#save_folder = dat_folder + '10182018/Fish3-2/Data/'  # Allsamples improved
+save_folder = dat_folder + '10182018/Fish3-2/Data/'  # Allsamples improved
 sample_folder = '/nrs/scicompsoft/elmalakis/Takashi_DRN_project/10182018/Fish3-2/test_sample/'  # Currently 20 samples
 
 
@@ -61,8 +61,9 @@ def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0,
     mean_th_factor=1.15
     U_update=False
     min_rank=1
+    pca_method='sparse'
 
-    Y_svd, _ = svd_patch(Y_d, nblocks=nblocks, dx=dx, stim_knots=stim_knots, stim_delta=stim_delta)
+    Y_svd, _ = svd_patch(Y_d, nblocks=nblocks, dx=dx, stim_knots=stim_knots, stim_delta=stim_delta, pca_method=pca_method)
     np.save(f'{fishName}/Y_2dsvd{ext}', Y_svd.astype('float32'))
 
     #print(" ---- Y_svd shape ---"+str(Y_svd.shape) )
@@ -129,7 +130,7 @@ def local_pca_multiple():
 
 
     save_folder_Detrend = save_folder + 'Detrend/'
-    save_folder_LocalPCA = save_folder + 'LocalPCA/divide10block10x10/svdsparse/'
+    save_folder_LocalPCA = save_folder + 'LocalPCA/divide10block10x10/svdsparse/10components/'
 
 
     if not os.path.isfile(save_folder_LocalPCA + '/proc_local_denoise.tmp'):
