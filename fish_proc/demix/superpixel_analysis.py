@@ -7,7 +7,7 @@ import multiprocessing as mp
 from scipy.sparse import csr_matrix, issparse, triu, csc_matrix
 from scipy.stats import rankdata
 import scipy.ndimage
-import tensorflow as tf
+#import tensorflow as tf
 import dask
 import dask.array as da
 
