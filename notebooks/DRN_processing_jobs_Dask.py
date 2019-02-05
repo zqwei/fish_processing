@@ -233,7 +233,10 @@ def registration(is_largefile=True):
         save_folder_PixelDenoise = save_folder + 'PixelDenoise/'
 
         print(f'checking file {folder}/{fish}')
-        if not os.path.isfile(save_folder_PixelDenoise+'/finished_pixel_denoise.tmp') and os.path.isfile(save_folder_PixelDenoise + '/motion_fix.npy'):
+        if os.path.isfile(save_folder_PixelDenoise+'/finished_pixel_denoise.tmp') and os.path.isfile(save_folder_PixelDenoise + '/motion_fix.npy'):
+            print('motion fix is found')
+            if not os.path.exists(save_folder_Registration):
+                os.makedirs(save_folder_Registration)
             if not os.path.isfile(save_folder_Registration+'/proc_registr.tmp'):
                 Path(save_folder_Registration+'/proc_registr.tmp').touch()
                 print(f'process file {folder}/{fish}')
@@ -283,6 +286,7 @@ def registration(is_largefile=True):
                     clear_variables(s_)
                     os.remove(save_folder_Registration+'/imgDMotion.npy')
                 Path(save_folder_Registration+'/finished_registr.tmp').touch()
+
     return None
 
 
@@ -304,6 +308,8 @@ def video_detrend():
         save_folder_Detrend = save_folder + 'Detrend/'
 
         print(f'checking file {folder}/{fish}')
+        if not os.path.exists(save_folder_Detrend):
+            os.makedirs(save_folder_Detrend)
         if os.path.isfile(save_folder_Detrend+'/finished_detrend.tmp'):
             continue
 
@@ -372,12 +378,16 @@ def local_pca():
         folder = row['folder']
         fish = row['fish']
         image_folder = f'/nrs/ahrens/Takashi/0{folder}/{fish}/'
-        save_folder = dat_folder + f'{folder}/{fish}/Data'
+        save_folder = dat_folder + f'{folder}/{fish}/Data/'
 
         save_folder_Detrend = save_folder + 'Detrend/'
         save_folder_LocalPCA = save_folder + 'LocalPCA/'
 
         print(f'checking file {folder}/{fish}')
+
+        if not os.path.exists(save_folder_LocalPCA):
+            os.makedirs(save_folder_LocalPCA)
+
         if os.path.isfile(save_folder_LocalPCA+'/finished_local_denoise.tmp'):
             continue
 
@@ -431,7 +441,7 @@ def demix_middle_data():
         folder = row['folder']
         fish = row['fish']
         image_folder = f'/nrs/ahrens/Takashi/0{folder}/{fish}/'
-        save_folder = dat_folder + f'{folder}/{fish}/Data'
+        save_folder = dat_folder + f'{folder}/{fish}/Data/'
         save_image_folder = dat_folder + f'{folder}/{fish}/Results'
 
         if not os.path.exists(save_image_folder):
@@ -576,7 +586,10 @@ def demix_middle_data_with_mask(row, ext=''):
     if not os.path.exists(save_image_folder):
         os.makedirs(save_image_folder)
     print('=====================================')
-    print(save_folder)
+    print(save_image_folder)
+
+    if not os.path.exists(save_folder_Demix):
+        os.makedirs(save_folder_Demix)
 
     if os.path.isfile(save_folder_Demix+f'/finished_demix{ext}.tmp'):
         return None
