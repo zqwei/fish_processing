@@ -574,7 +574,7 @@ def demix_middle_data_with_mask(row, ext=''):
     folder = row['folder']
     fish = row['fish']
     image_folder = f'/nrs/ahrens/Takashi/{folder}/{fish}/'
-    save_folder = dat_folder + f'{folder}/{fish}/Data'
+    save_folder = dat_folder + f'{folder}/{fish}/Data/'
     save_image_folder = dat_folder + f'{folder}/{fish}/Results'
 
     save_folder_Registration = save_folder + 'Registration/'
