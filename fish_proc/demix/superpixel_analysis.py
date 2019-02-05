@@ -7,7 +7,7 @@ import multiprocessing as mp
 from scipy.sparse import csr_matrix, issparse, triu, csc_matrix
 from scipy.stats import rankdata
 import scipy.ndimage
-#import tensorflow as tf
+import tensorflow as tf
 import dask
 import dask.array as da
 
@@ -45,17 +45,17 @@ def threshold_data_dask(Yd, th=2):
 #     dims_t = Yt.shape
 #     mat = tf.range(tf.reduce_prod(dims_t[:-1]))
 #     ref_mat = tf.reshape(mat, shape=dims_t[:-1]) #FIXME: transpose to do the order='F'
-#
 #     #ref_mat = np.arange(np.prod(dims[:-1])).reshape(dims[:-1],order='F')
+#
 #     ######### calculate correlation ############
 #     # ZW -- better optimizaiton of memory here
 #     meanYt, varianceYt = tf.nn.moments(Yt, axes=[2])
 #     w_mov = tf.divide(tf.subtract(tf.transpose(Yt, perm=[2,0,1]), tf.reduce_mean(Yt, axis=2)), tf.sqrt(varianceYt))
 #     #w_mov = (Yt.transpose(2,0,1) - np.mean(Yt, axis=2)) / np.std(Yt, axis=2)
-#     w_mov = tf.where(tf.is_nan(w_mov), 0., w_mov) #FIXME
+#     w_mov = tf.where(tf.is_nan(w_mov), tf.zeros_like(w_mov), w_mov) #FIXME
 #     #w_mov[np.isnan(w_mov)] = 0
-#     # ZW -- this one need to be speed up ----
 #
+#     # ZW -- this one need to be speed up ----
 #     start_time = time.time()
 #     rho_v = tf.reduce_mean(tf.multiply(w_mov[:, :-1, :], w_mov[:, 1:, :]), axis=0)
 #     rho_h = tf.reduce_mean(tf.multiply(w_mov[:, :, :-1], w_mov[:, :, 1:]), axis=0)
@@ -1178,15 +1178,15 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             if th[ii] >= 0:
                 start_time = time.time()
                 Yt = threshold_data(Yd, th=th[ii])
-                print("threshold data normal: "+str(time.time()-start_time))
-                #salma dask on small number of frames almost the same
+                # print("threshold data normal: "+str(time.time()-start_time))
+                # dask on small number of frames almost the same
                 # Yt_dask = threshold_data_dask(Yd, th=th[ii])
                 # print("threshold data dask: "+str(time.time()-start_time))
                 # # check if both result is the same
                 # isequal = np.array_equal(Yt, Yt_dask)
             else:
                 Yt = Yd.copy()
-        start = time.time()
+        #start = time.time()
         if num_plane > 1:
             print("3d data!")
             connect_mat_1, idx, comps, permute_col = find_superpixel_3d(Yt,num_plane,cut_off_point[ii],length_cut[ii])
@@ -1197,29 +1197,26 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             # print("superpixel time: "+ str(time.time()-start_time))
 
             # start_time = time.time()
-            # connect_mat_1_t, idx_t, comps_t, permute_col_t = find_superpixel_tensor(Yt, cut_off_point[ii], length_cut[ii])
+            #connect_mat_1_t, idx_t, comps_t, permute_col_t = find_superpixel_tensor(Yt, cut_off_point[ii], length_cut[ii])
             # print("superpixel time tensor: " + str(time.time() - start_time))
 
-            print("find superpixels!")
-            start_time = time.time()
+            #print("find superpixels!")
+            #start_time = time.time()
             connect_mat_1, idx, comps, permute_col = find_superpixel_dask(Yt, cut_off_point[ii], length_cut[ii])
-            print("superpixel time dask: " + str(time.time() - start_time))
-
+            #print("superpixel time dask: " + str(time.time() - start_time))
 
         #print("time: " + str(time.time()-start)) #salma commented this
 
         if idx==0:
             continue
 
-        start = time.time()
+        #start = time.time()
         print("rank 1 svd!")
         # if ii > 0:
         #     c_ini, a_ini, _, _ = spatial_temporal_ini(Yt, comps, idx, length_cut[ii], bg=False)
         # else:
         #     c_ini, a_ini, ff, fb = spatial_temporal_ini(Yt, comps, idx, length_cut[ii], bg=bg)
         # print("time spatial_temporal_ini: " + str(time.time()-start))
-
-
         start = time.time()
         print("rank 1 svd!")
         if ii > 0:
