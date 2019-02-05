@@ -321,8 +321,7 @@ def compute_svd(M,
             np.save(f'SVD_error/SVD_matrix_id{int(random.random()*1e10)}', M)
             U, s, Vt = randomized_svd(M, n_components=n_components, random_state=0) #fix the seed
     elif method == 'randomized':
-        U, s, Vt = randomized_svd(M, n_components=n_components,
-                n_iter=7, random_state=None)
+        U, s, Vt = randomized_svd(M, n_components=n_components, n_iter=7, random_state=None)
     elif method == 'sparse':
         # Use sparsity: You can add maxiter to limit the number of iterations. Here the n_components = 6 by default
         # used when all the components in a dense matrix is not needed
@@ -469,6 +468,8 @@ def denoise_patch(M,
     pca_method: string
                 method for matrix decomposition (e.g. PCA, sPCA, rPCA, etc).
                 see compute_svd for options
+    svds_ncomponents: int
+                number of components if sparse svd; "sparse"; is used as pca_method
 
     Outputs:
     -------
