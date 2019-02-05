@@ -106,9 +106,9 @@ def motion_correction(imgD_, fix_, fishName, ext=''):
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
     trans.ss_sigma_factor = 1.0
-    print('memory usage before processing -- ')
+    #print('memory usage before processing -- ')
     #get_process_memory();
-    start_time = time.time() # --salma
+    start_time = time.time()
     imgDMotion, imgDMotionVar = parallel_to_chunks(regidStacks, imgD_, fix=fix_, trans=trans)
     print("--- %s seconds for parallel_to_chunks rigidstacks---" % (time.time() - start_time))  # --salma
 
