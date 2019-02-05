@@ -7,7 +7,6 @@ import multiprocessing as mp
 from scipy.sparse import csr_matrix, issparse, triu, csc_matrix
 from scipy.stats import rankdata
 import scipy.ndimage
-#import tensorflow as tf
 import dask
 import dask.array as da
 
@@ -35,87 +34,6 @@ def threshold_data_dask(Yd, th=2):
     Yt_dask = dask.compute(*batches)
     Yt = np.vstack(Yt_dask)
     return Yt
-
-
-# def find_superpixel_tensor(Yt, cut_off_point, length_cut):
-#     dims = Yt.shape
-#     Yt = tf.convert_to_tensor(Yt, dtype=tf.float32)
-#     cut_off_point = tf.constant(cut_off_point, dtype=tf.float32)
-#
-#     dims_t = Yt.shape
-#     mat = tf.range(tf.reduce_prod(dims_t[:-1]))
-#     ref_mat = tf.reshape(mat, shape=dims_t[:-1]) #FIXME: transpose to do the order='F'
-#     #ref_mat = np.arange(np.prod(dims[:-1])).reshape(dims[:-1],order='F')
-#
-#     ######### calculate correlation ############
-#     # ZW -- better optimizaiton of memory here
-#     meanYt, varianceYt = tf.nn.moments(Yt, axes=[2])
-#     w_mov = tf.divide(tf.subtract(tf.transpose(Yt, perm=[2,0,1]), tf.reduce_mean(Yt, axis=2)), tf.sqrt(varianceYt))
-#     #w_mov = (Yt.transpose(2,0,1) - np.mean(Yt, axis=2)) / np.std(Yt, axis=2)
-#     w_mov = tf.where(tf.is_nan(w_mov), tf.zeros_like(w_mov), w_mov) #FIXME
-#     #w_mov[np.isnan(w_mov)] = 0
-#
-#     # ZW -- this one need to be speed up ----
-#     start_time = time.time()
-#     rho_v = tf.reduce_mean(tf.multiply(w_mov[:, :-1, :], w_mov[:, 1:, :]), axis=0)
-#     rho_h = tf.reduce_mean(tf.multiply(w_mov[:, :, :-1], w_mov[:, :, 1:]), axis=0)
-#     rho_l = tf.reduce_mean(tf.multiply(w_mov[:, 1:, :-1],  w_mov[:, :-1, 1:]), axis=0)
-#     rho_r = tf.reduce_mean(tf.multiply(w_mov[:, :-1, :-1], w_mov[:, 1:, 1:]), axis=0)
-#     print("matrix multiply tensor: " + str(time.time() - start_time))
-#
-#     rho_v = tf.concat([rho_v, tf.zeros(1, rho_v.shape[1])], axis=0)
-#     rho_h = tf.concat([rho_h, tf.zeros([rho_h.shape[0],1])], axis = 1)
-#     rho_r = tf.concat([rho_r, tf.zeros([rho_r.shape[0],1])], axis = 1)
-#     rho_r = tf.concat([rho_r, tf.zeros([1, rho_r.shape[1]])], axis= 0)
-#     rho_l = tf.concat([tf.zeros([rho_l.shape[0],1]), rho_l], axis=1)
-#     rho_l = tf.concat([rho_l, tf.zeros([1, rho_l.shape[1]])], axis=0)
-#     print("get correlation mats tensor:: " + str(time.time() - start_time))
-#
-#     ################## find pairs where correlation above threshold
-#     temp_v = tf.where(rho_v > cut_off_point)
-#     A_v = ref_mat[temp_v]
-#     B_v = ref_mat[(tf.add(temp_v[0],1), temp_v[1])]
-#
-#     temp_h =  tf.where(rho_h > cut_off_point)
-#     A_h = ref_mat[temp_h]
-#     B_h = ref_mat[(temp_h[0], temp_h[1] + 1)]
-#
-#     temp_l = tf.where(rho_l > cut_off_point)
-#     A_l = ref_mat[temp_l]
-#     B_l = ref_mat[(tf.add(temp_l[0],1), tf.subtract(temp_l[1],1))]
-#
-#     temp_r = np.where(rho_r > cut_off_point)
-#     A_r = ref_mat[temp_r]
-#     B_r = ref_mat[(tf.add(temp_r[0],1), tf.add(temp_r[1],1))]
-#
-#     A = tf.concat([A_v,A_h,A_l,A_r])
-#     B = tf.concat([B_v,B_h,B_l,B_r])
-#
-#     with tf.Session() as sess:
-#         A = sess.run(A)
-#         B = sess.run(B)
-#
-#
-#     ########### form connected componnents #########
-#     G = nx.Graph()
-#     G.add_edges_from(list(zip(A, B)))
-#     comps=list(nx.connected_components(G))
-#
-#     connect_mat=np.zeros(np.prod(dims[:2]))
-#     idx=0
-#     for comp in comps:
-#         if(len(comp) > length_cut):
-#             idx = idx+1
-#     permute_col = np.random.permutation(idx)+1
-#     ii=0
-#     for comp in comps:
-#         if(len(comp) > length_cut):
-#             connect_mat[list(comp)] = permute_col[ii]
-#             ii = ii+1
-#
-#     connect_mat_1 = connect_mat.reshape(dims[0],dims[1],order='F')
-#
-#     return connect_mat_1, idx, comps, permute_col
 
 
 def find_superpixel_dask(Yt, cut_off_point, length_cut):
@@ -331,7 +249,7 @@ def find_superpixel_3d(Yt, num_plane, cut_off_point, length_cut):
     for comp in comps:
         if(len(comp) > length_cut):
             idx = idx+1
-    #salma:fix the seed
+    #fix the seed
     np.random.seed(0)
     permute_col = np.random.permutation(idx)+1
     ii=0
@@ -701,7 +619,6 @@ def l1_tf(y, sigma):
     return np.asarray(x.value).flatten()
 
 
-# salma
 def component_merge(comp, num_list, U, a, c, normalize_factor):
     print("merge" + str(num_list[comp] + 1))
     a_zero = np.zeros([a.shape[0], 1])
@@ -1191,21 +1108,11 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             print("3d data!")
             connect_mat_1, idx, comps, permute_col = find_superpixel_3d(Yt,num_plane,cut_off_point[ii],length_cut[ii])
         else:
-            #print("find superpixels!")
-            # start_time = time.time()
+            print("find superpixels!")
             # connect_mat_1, idx, comps, permute_col = find_superpixel(Yt,cut_off_point[ii],length_cut[ii])
-            # print("superpixel time: "+ str(time.time()-start_time))
-
-            # start_time = time.time()
-            #connect_mat_1_t, idx_t, comps_t, permute_col_t = find_superpixel_tensor(Yt, cut_off_point[ii], length_cut[ii])
-            # print("superpixel time tensor: " + str(time.time() - start_time))
-
-            #print("find superpixels!")
-            #start_time = time.time()
             connect_mat_1, idx, comps, permute_col = find_superpixel_dask(Yt, cut_off_point[ii], length_cut[ii])
-            #print("superpixel time dask: " + str(time.time() - start_time))
 
-        #print("time: " + str(time.time()-start)) #salma commented this
+        #print("time: " + str(time.time()-start))
 
         if idx==0:
             continue
@@ -1247,7 +1154,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
                 pure_pix = np.hstack((pure_pix, unique_pix_temp[pure_pix_temp]))
         pure_pix = np.unique(pure_pix)
 
-        #print("time: " + str(time.time()-start)) # salma commented this
+        #print("time: " + str(time.time()-start)) #commented this
 
         start = time.time()
         print("prepare iteration!")
@@ -1258,7 +1165,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         else:
             a, c, b, normalize_factor, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=True)
 
-        #print("time: " + str(time.time()-start)) #salma commented this
+        #print("time: " + str(time.time()-start)) #commented this
         print("start " + str(ii+1) + " pass iteration!")
         if ii == pass_num - 1:
             maxiter = max_iter_fin
@@ -1274,7 +1181,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             a, c, b, fb, ff, res, corr_img_all_r, num_list = update_AC_l2_Y(Yd.reshape(np.prod(dims),-1,order="F"), normalize_factor, a, c, b, dims,
                                         corr_th_fix, maxiter=maxiter, tol=1e-8, update_after=update_after,
                                         merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, max_allow_neuron_size=max_allow_neuron_size)
-        #print("time: " + str(time.time()-start)) #salma commented this
+        #print("time: " + str(time.time()-start)) #commented this
         superpixel_rlt.append({'connect_mat_1':connect_mat_1, 'pure_pix':pure_pix, 'unique_pix':unique_pix, 'brightness_rank':brightness_rank, 'brightness_rank_sup':brightness_rank_sup})
         if pass_num > 1 and ii == 0:
             rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list}
@@ -1291,7 +1198,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         for ii in range(c.shape[1]):
             c_tf = np.hstack((c_tf, l1_tf(c[:,ii], sigma[ii])))
         c_tf = c_tf.reshape(T,int(c_tf.shape[0]/T),order="F")
-    #print("time: " + str(time.time()-start)) #salma commented this
+    #print("time: " + str(time.time()-start)) #commented this
 
     fin_rlt = {'a':a, 'c':c, 'c_tf':c_tf, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list}
 
