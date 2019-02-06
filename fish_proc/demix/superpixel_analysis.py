@@ -1,19 +1,24 @@
 import time
 import numpy as np
 import networkx as nx
-from ..utils.memory import get_process_memory, clear_variables
-from sklearn.decomposition import NMF, TruncatedSVD
-import multiprocessing as mp
-from scipy.sparse import csr_matrix, issparse, triu, csc_matrix
-from scipy.stats import rankdata
-import scipy.ndimage
+
 import dask
 import dask.array as da
+import multiprocessing as mp
+
+import scipy.ndimage
+from scipy.stats import rankdata
+from scipy.sparse import csr_matrix, issparse, triu, csc_matrix
+
+from sklearn.decomposition import NMF, TruncatedSVD
+from ..utils.memory import get_process_memory, clear_variables
 
 
 # ZW -- indicated the comments by Ziqiang Wei
 # email : weiz@janelia.hhmi.org
 
+
+# SE -- multithreading using Dask for several places, fix the random seeds, NMF solver is configurable (cd, mu)
 
 def threshold_data(Yd, th=2):
     # ZW -- this may take long time to compute according to size of matrix -- need to optimize
@@ -53,7 +58,7 @@ def find_superpixel_dask(Yt, cut_off_point, length_cut):
     rho_h = da.mean(da.multiply(w_mov[:, :, :-1], w_mov[:, :, 1:]), axis=0)
     rho_l = da.mean(da.multiply(w_mov[:, 1:, :-1], w_mov[:, :-1, 1:]), axis=0)
     rho_r = da.mean(da.multiply(w_mov[:, :-1, :-1], w_mov[:, 1:, 1:]), axis=0)
-    print("matrix multiply numpy: "+str(time.time()-start_time))
+    print("matrix multiply: "+str(time.time()-start_time))
 
     # clean for memory leak
     w_mov = None
@@ -107,7 +112,7 @@ def find_superpixel_dask(Yt, cut_off_point, length_cut):
     for comp in comps:
         if(len(comp) > length_cut):
             idx = idx+1
-    #salme fix the seed
+    #fix the seed
     np.random.seed(0)
     permute_col = np.random.permutation(idx)+1
     ii=0
@@ -194,7 +199,87 @@ def find_superpixel(Yt, cut_off_point, length_cut):
     return connect_mat_1, idx, comps, permute_col
 
 
-##TODO: dask the superpixel_3d
+def find_superpixel_3d_dask(Yt, num_plane, cut_off_point, length_cut):
+    # ZW -- this may take long time to compute according to size of matrix -- need to optimize
+    dims = Yt.shape
+    Yt_3d = Yt.reshape(dims[0],int(dims[1]/num_plane),num_plane,dims[2],order="F")
+    dims = Yt_3d.shape
+    ref_mat = np.arange(np.prod(dims[:-1])).reshape(dims[:-1],order='F')
+
+    Yt_3d_dask = da.from_array(Yt_3d, chunks=({0: 'auto', 1: 'auto', 2: 'auto', 3:'auto'}))  # auto chunking
+
+    ######### calculate correlation ############
+    # ZW -- better optimizaiton of memory here
+    w_mov = (Yt_3d_dask.transpose(3,0,1,2) - da.mean(Yt_3d_dask, axis=3)) / da.std(Yt_3d_dask, axis=3)
+    w_mov[da.isnan(w_mov)] = 0
+    # ZW -- this one need to be speed up ----
+    rho_v = da.mean(da.multiply(w_mov[:, :-1, :], w_mov[:, 1:, :]), axis=0)
+    rho_h = da.mean(da.multiply(w_mov[:, :, :-1], w_mov[:, :, 1:]), axis=0)
+    rho_l = da.mean(da.multiply(w_mov[:, 1:, :-1], w_mov[:, :-1, 1:]), axis=0)
+    rho_r = da.mean(da.multiply(w_mov[:, :-1, :-1], w_mov[:, 1:, 1:]), axis=0)
+    rho_u = da.mean(da.multiply(w_mov[:, :, :, :-1], w_mov[:, :, :, 1:]), axis=0)
+    # ZW -- memory leak --
+    w_mov = None
+    clear_variables(w_mov)
+    # get correlation mats
+    rho_v = da.concatenate([rho_v, np.zeros([1, rho_v.shape[1],num_plane])], axis=0)
+    rho_h = da.concatenate([rho_h, np.zeros([rho_h.shape[0],1,num_plane])], axis=1)
+    rho_r = da.concatenate([rho_r, np.zeros([rho_r.shape[0],1,num_plane])], axis=1)
+    rho_r = da.concatenate([rho_r, np.zeros([1, rho_r.shape[1],num_plane])], axis=0)
+    rho_l = da.concatenate([np.zeros([rho_l.shape[0],1,num_plane]), rho_l], axis=1)
+    rho_l = da.concatenate([rho_l, np.zeros([1, rho_l.shape[1],num_plane])], axis=0)
+    rho_u = da.concatenate([rho_u, np.zeros([rho_u.shape[0], rho_u.shape[1],1])], axis=2)
+    ################## find pairs where correlation above threshold
+    temp_v = da.where(rho_v > cut_off_point)
+    temp_v = dask.compute(*temp_v)
+    A_v = ref_mat[temp_v]
+    B_v = ref_mat[(temp_v[0] + 1, temp_v[1], temp_v[2])]
+
+    temp_h = da.where(rho_h > cut_off_point)
+    temp_h = dask.compute(*temp_h)
+    A_h = ref_mat[temp_h]
+    B_h = ref_mat[(temp_h[0], temp_h[1] + 1, temp_h[2])]
+
+    temp_u = da.where(rho_u > cut_off_point)
+    temp_u = dask.compute(*temp_u)
+    A_u = ref_mat[temp_u]
+    B_u = ref_mat[(temp_u[0], temp_u[1], temp_u[2]+1)]
+
+    temp_l = da.where(rho_l > cut_off_point)
+    temp_l = dask.compute(*temp_l)
+    A_l = ref_mat[temp_l]
+    B_l = ref_mat[(temp_l[0] + 1, temp_l[1] - 1, temp_l[2])]
+
+    temp_r = da.where(rho_r > cut_off_point)
+    temp_r = dask.compute(*temp_r)
+    A_r = ref_mat[temp_r]
+    B_r = ref_mat[(temp_r[0] + 1, temp_r[1] + 1, temp_r[2])]
+
+    A = da.concatenate([A_v,A_h,A_l,A_r,A_u])
+    B = da.concatenate([B_v,B_h,B_l,B_r,B_u])
+    A = A.compute()
+    B = B.compute()
+    ########### form connected componnents #########
+    G = nx.Graph()
+    G.add_edges_from(list(zip(A, B)))
+    comps=list(nx.connected_components(G))
+    connect_mat=np.zeros(np.prod(dims[:-1]))
+    idx=0
+    for comp in comps:
+        if(len(comp) > length_cut):
+            idx = idx+1
+    #fix the seed
+    np.random.seed(0)
+    permute_col = np.random.permutation(idx)+1
+    ii=0
+    for comp in comps:
+        if(len(comp) > length_cut):
+            connect_mat[list(comp)] = permute_col[ii]
+            ii = ii+1
+    connect_mat_1 = connect_mat.reshape(Yt.shape[:-1],order='F')
+    return connect_mat_1, idx, comps, permute_col
+
+
 def find_superpixel_3d(Yt, num_plane, cut_off_point, length_cut):
     # ZW -- this may take long time to compute according to size of matrix -- need to optimize
     dims = Yt.shape
@@ -510,9 +595,9 @@ def prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, U_mat, V_mat, mo
     V_mat = V_mat*temp
     U_mat = U_mat/temp
     if more:
-        start = time.time()
+        #start = time.time()
         normalize_factor = np.std(Yd, axis=1, keepdims=True)*T
-        print(time.time()-start)
+        #print(time.time()-start)
         B_mat = np.median(Yd, axis=1, keepdims=True)
         return U_mat, V_mat, B_mat, normalize_factor, brightness_rank
     else:
