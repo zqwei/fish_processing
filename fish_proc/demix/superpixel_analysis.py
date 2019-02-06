@@ -58,9 +58,11 @@ def find_superpixel(Yt, cut_off_point, length_cut):
     B_r = ref_mat[(temp_r[0] + 1, temp_r[1] + 1)]
     A = np.concatenate([A_v,A_h,A_l,A_r])
     B = np.concatenate([B_v,B_h,B_l,B_r])
+    print('Start with finding superpixels.....')
     ########### form connected componnents #########
     G = nx.Graph();
     G.add_edges_from(list(zip(A, B)))
+    print('Get components.....')
     comps=list(nx.connected_components(G))
     connect_mat=np.zeros(np.prod(dims[:2]));
     idx=0;
@@ -579,6 +581,8 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
 
     f = np.ones([c.shape[0],1]);
     num_list = np.arange(K);
+    
+    print('start update_AC_l2_Y....')
 
     for iters in range(maxiter):
         start = time.time();
@@ -668,7 +672,8 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
     corr_img_all = vcorrcoef_Y(U/normalize_factor, c);
     corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
     mask_ab = np.hstack((mask_a,fg));
-
+    
+    print('start update_AC_bg_l2_Y....')
     for iters in range(maxiter):
         start = time.time();
 
@@ -741,6 +746,8 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
 
 def reconstruct(Yd, spatial_components, temporal_components, background_components, fb=None, ff=None):
     dims = Yd.shape;
+    print('start to reconstruct and compute movie residuals....')
+    
     if fb is not None:
         mov_res = Yd - (np.matmul(spatial_components, temporal_components.T)+np.matmul(fb, ff.T)+background_components).reshape(dims, order='F');
     else:
@@ -787,6 +794,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
                 Yt = threshold_data(Yd, th=th[ii]);
             else:
                 Yt = Yd.copy();
+        print("Get threshould data.....")
         start = time.time();
         if num_plane > 1:
             print("3d data!");
