@@ -437,7 +437,7 @@ def l1_tf(y, sigma):
 
 
 def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size,merge_corr_thr=0.5,merge_overlap_thr=0.8):
-    
+
     # ZW -- slow --
     f = np.ones([c.shape[0],1]);
     ############ calculate overlap area ###########
@@ -563,13 +563,13 @@ def ls_solve_acc_Y(X, U, mask=None, beta_LS=None):
 def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
             maxiter=50, tol=1e-8, update_after=None,merge_corr_thr=0.5,
             merge_overlap_thr=0.7, num_plane=1, plot_en=False, max_allow_neuron_size=0.2):
-    
+
     if U.ndim>2:
         from scipy.sparse import csr_matrix
         dims = U.shape
         T = dims[-1];
         U = U.reshape(np.prod(dims[:-1]),T,order = "F")
-    
+
     K = c.shape[1];
     res = np.zeros(maxiter);
     uv_mean = U.mean(axis=1,keepdims=True);
@@ -581,7 +581,7 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
 
     f = np.ones([c.shape[0],1]);
     num_list = np.arange(K);
-    
+
     print('start update_AC_l2_Y....')
 
     for iters in range(maxiter):
@@ -623,7 +623,7 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
             # print(res[iters])
             # if (res[0] - res[iters])/res[0]<tol:
             #     break
-        # if iters==0: 
+        # if iters==0:
         #     res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
         #     print(res[iters])
         print("time: " + str(time.time()-start))
@@ -651,13 +651,13 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
             maxiter=50, tol=1e-8, update_after=None,merge_corr_thr=0.5,
             merge_overlap_thr=0.7, num_plane=1, plot_en=False,
             max_allow_neuron_size=0.2):
-    
+
     if U.ndim>2:
         from scipy.sparse import csr_matrix
         dims = U.shape
         T = dims[-1];
         U = U.reshape(np.prod(dims[:-1]),T,order = "F")
-    
+
     K = c.shape[1];
     res = np.zeros(maxiter);
     uv_mean = U.mean(axis=1,keepdims=True);
@@ -672,7 +672,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
     corr_img_all = vcorrcoef_Y(U/normalize_factor, c);
     corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
     mask_ab = np.hstack((mask_a,fg));
-    
+
     print('start update_AC_bg_l2_Y....')
     for iters in range(maxiter):
         start = time.time();
@@ -722,7 +722,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
             # print(res[iters])
             # if (res[0] - res[iters])/res[0]<tol:
             #     break
-        # if iters==0: 
+        # if iters==0:
         #     res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
         #     print(res[iters])
         print("time: " + str(time.time()-start));
@@ -744,15 +744,25 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
     return a, c, b, fb, ff, res, corr_img_all_r, num_list
 
 
+# def reconstruct(Yd, spatial_components, temporal_components, background_components, fb=None, ff=None):
+#     dims = Yd.shape;
+#     print('start to reconstruct and compute movie residuals....')
+#     if fb is not None:
+#         mov_res = Yd - (np.matmul(spatial_components, temporal_components.T)+np.matmul(fb, ff.T)+background_components).reshape(dims, order='F');
+#     else:
+#         mov_res = Yd - (np.matmul(spatial_components, temporal_components.T)+background_components).reshape(dims, order='F');
+#     return mov_res
+
 def reconstruct(Yd, spatial_components, temporal_components, background_components, fb=None, ff=None):
     dims = Yd.shape;
-    print('start to reconstruct and compute movie residuals....')
-    
+    print('start to reconstruct movie....')
+    ss = csr_matrix(spatial_components)
+    st = csr_matrix(temporal_components)
+    recon_ = ss.dot(st.T)+background_components
+    print('start to compute residuals....')
     if fb is not None:
-        mov_res = Yd - (np.matmul(spatial_components, temporal_components.T)+np.matmul(fb, ff.T)+background_components).reshape(dims, order='F');
-    else:
-        mov_res = Yd - (np.matmul(spatial_components, temporal_components.T)+background_components).reshape(dims, order='F');
-    return mov_res
+        recon_ = recon_ + csr_matrix(fb).dot(csr_matrix(ff).T)
+    return Yd - recon_.reshape(dims, order='F')
 
 
 def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1], pass_num=1, residual_cut = [0.6,0.6],
@@ -889,3 +899,4 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         return {'rlt':rlt, 'fin_rlt':fin_rlt, "superpixel_rlt":superpixel_rlt}
     else:
         return {'fin_rlt':fin_rlt, "superpixel_rlt":superpixel_rlt}
+                  
