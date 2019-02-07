@@ -408,7 +408,7 @@ def order_superpixels(permute_col, unique_pix, U_mat, V_mat):
     u_max = U_mat.max(axis=0);
     v_max = V_mat.max(axis=0);
     brightness = u_max * v_max;
-    brightness_arg = np.argsort(-brightness); #
+    # brightness_arg = np.argsort(-brightness); #
     brightness_rank = U_mat.shape[1] - rankdata(brightness,method="ordinal");
     return brightness_rank
 
@@ -439,7 +439,7 @@ def l1_tf(y, sigma):
 def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size,merge_corr_thr=0.5,merge_overlap_thr=0.8):
 
     # ZW -- slow --
-    f = np.ones([c.shape[0],1]);
+    # f = np.ones([c.shape[0],1]);
     ############ calculate overlap area ###########
     a = csc_matrix(a);
     a_corr = triu(a.T.dot(a),k=1);
@@ -762,7 +762,7 @@ def reconstruct(Yd, spatial_components, temporal_components, background_componen
     print('start to compute residuals....')
     if fb is not None:
         recon_ = recon_ + csr_matrix(fb).dot(csr_matrix(ff).T)
-    return Yd - recon_.reshape(dims, order='F')
+    return Yd - recon_.toarray().reshape(dims, order='F')
 
 
 def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1], pass_num=1, residual_cut = [0.6,0.6],
@@ -875,8 +875,8 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         superpixel_rlt.append({'connect_mat_1':connect_mat_1, 'pure_pix':pure_pix, 'unique_pix':unique_pix, 'brightness_rank':brightness_rank, 'brightness_rank_sup':brightness_rank_sup});
         if pass_num > 1 and ii == 0:
             rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
-            a0 = a.copy();
-
+            # a0 = a.copy();
+            
 
     # TF on temporal components
     c_tf = [];
@@ -899,4 +899,3 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         return {'rlt':rlt, 'fin_rlt':fin_rlt, "superpixel_rlt":superpixel_rlt}
     else:
         return {'fin_rlt':fin_rlt, "superpixel_rlt":superpixel_rlt}
-                  
