@@ -758,11 +758,11 @@ def reconstruct(Yd, spatial_components, temporal_components, background_componen
     print('start to reconstruct movie....')
     ss = csr_matrix(spatial_components)
     st = csr_matrix(temporal_components)
-    recon_ = ss.dot(st.T)+background_components
+    recon_ = ss.dot(st.T).toarray()+background_components
     print('start to compute residuals....')
     if fb is not None:
-        recon_ = recon_ + csr_matrix(fb).dot(csr_matrix(ff).T)
-    return Yd - recon_.toarray().reshape(dims, order='F')
+        recon_ = recon_ + csr_matrix(fb).dot(csr_matrix(ff).T).toarray()
+    return Yd - np.asarray(recon_).reshape(dims, order='F')
 
 
 def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1], pass_num=1, residual_cut = [0.6,0.6],
