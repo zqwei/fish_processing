@@ -15,7 +15,32 @@ weiz@janelia.hhmi.org
 import numpy as np
 import warnings
 
-def setup_cluster():
+
+def get_jobqueue_cluster(walltime='12:00', cores=1, local_directory=None, memory='16GB', **kwargs):
+    """
+    Instantiate a dask_jobqueue cluster using the LSF scheduler on the Janelia Research Campus compute cluster.
+    This function wraps the class dask_jobqueue.LSFCLuster and instantiates this class with some sensible defaults.
+    Extra kwargs added to this function will be passed to LSFCluster().
+    The full API for the LSFCluster object can be found here:
+    https://jobqueue.dask.org/en/latest/generated/dask_jobqueue.LSFCluster.html#dask_jobqueue.LSFCluster
+
+    """
+    from dask_jobqueue import LSFCluster
+    import os
+
+    if local_directory is None:
+        local_directory = '/scratch/' + os.environ['USER'] + '/'
+
+    cluster = LSFCluster(queue='normal',
+                         walltime=walltime,
+                         cores=cores,
+                         local_directory=local_directory,
+                         memory=memory,
+                         **kwargs)
+    return cluster
+
+
+def setup_drmma_cluster():
     """
     Instatiate a DRMAACluster for use with the LSF scheduler on the Janelia Research Campus compute cluster. This is a
     wrapper for dask_drmaa.DRMMACluster that uses reasonable default settings for the dask workers. Specifically, this
@@ -50,19 +75,22 @@ def setup_cluster():
 
 
 def setup_workers(numCore):
-    cluster = setup_cluster()
+    cluster = get_jobqueue_cluster()
     from dask.distributed import Client
     client = Client(cluster)
     cluster.start_workers(numCore)
     return cluster, client
 
+
 def setup_local_worker():
     from dask.distributed import Client
     return Client()
 
+
 def terminate_workers(cluster, client):
     client.close()
     cluster.close()
+
     
 def warn_on_large_chunks(x):
     import itertools
@@ -72,6 +100,7 @@ def warn_on_large_chunks(x):
         warnings.warn("Array contains very large chunks")
         
 
+        
 if __name__ == '__main__':
     print('Testing setup of Dask---')
     cluster, client = setup_workers(10)
