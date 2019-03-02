@@ -14,7 +14,7 @@ def detrend(mov,
     # Adaptive spline fit
 
     if stim is None:
-        stim = np.zeros(mov.shape[-1])
+        stim = np.zeros(mov.shape[axis])
 
     trend = _get_spline_trend(data=mov,
                               stim=stim,
@@ -45,7 +45,7 @@ def detrend(mov,
 
 def trend(mov, order=3, followup=100, spacing=2000, q=.05, axis=-1, robust=True):
     # Adaptive spline fit
-    stim = np.zeros(mov.shape[-1])
+    stim = np.zeros(mov.shape[axis])
     return _get_spline_trend(data=mov, stim=stim, disc_idx=None, order=order,
                              followup=followup, spacing=spacing, q=q, axis=axis, robust=robust),
 
