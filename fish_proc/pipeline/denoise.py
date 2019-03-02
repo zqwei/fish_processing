@@ -24,6 +24,7 @@ def detrend(Y_, fishName, n_split = 1, ext=''):
     get_process_memory();
     return None
 
+
 def denose_2dsvd(Y_d, fishName, nblocks=[10, 10], stim_knots=None, stim_delta=0, ext=''):
     from ..denoiseLocalPCA.denoise import temporal as svd_patch
     from ..utils.memory import get_process_memory, clear_variables
