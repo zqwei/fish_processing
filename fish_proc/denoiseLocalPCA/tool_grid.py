@@ -355,16 +355,12 @@ def run_single(Y,
             rank or final number of components stored for each movie.
     ------
     """
-    get_process_memory();
-    cpu_count = multiprocessing.cpu_count()
     start=time.time()
-    pool = multiprocessing.Pool(cpu_count)
-    args=[[patch] for patch in Y]
-    Y = None
-    clear_variables(Y)
-    get_process_memory();
-    # define params in function
-    c_outs = pool.starmap(partial(gpca.denoise_patch,
+    if is_single_core:
+        Yds = [None]*len(Y)
+        vtids = [None]*len(Y)
+        for ii, patch in enumerate(Y):
+            resultdict = gpca.denoise_patch(patch,
                                   maxlag=maxlag,
                                   confidence=confidence,
                                   greedy=greedy,
@@ -373,17 +369,39 @@ def run_single(Y,
                                   U_update=U_update,
                                   min_rank=min_rank,
                                   stim_knots=stim_knots,
-                                  stim_delta=stim_delta),
-                          args)
-    pool.close()
-    pool.join()
+                                  stim_delta=stim_delta)
+            Yds[ii]=resultdict[0]
+            vtids[ii]=resultdict[1]
+    else: # multiprocessing coondition
+        get_process_memory();
+        cpu_count = multiprocessing.cpu_count()        
+        pool = multiprocessing.Pool(cpu_count)
+        args=[[patch] for patch in Y]
+        Y = None
+        clear_variables(Y)
+        get_process_memory();
+        # define params in function
+        c_outs = pool.starmap(partial(gpca.denoise_patch,
+                                      maxlag=maxlag,
+                                      confidence=confidence,
+                                      greedy=greedy,
+                                      fudge_factor=fudge_factor,
+                                      mean_th_factor=mean_th_factor,
+                                      U_update=U_update,
+                                      min_rank=min_rank,
+                                      stim_knots=stim_knots,
+                                      stim_delta=stim_delta),
+                              args)
+        pool.close()
+        pool.join()
+        Yds = [out_[0] for out_ in c_outs]
+        vtids = [out_[1] for out_ in c_outs]
+        c_outs = None
+        clear_variables(c_outs)
+        get_process_memory();
+
     print('Total run time: %f'%(time.time()-start))
-    Yds = [out_[0] for out_ in c_outs]
-    vtids = [out_[1] for out_ in c_outs]
     vtids = np.asarray(vtids).astype('int')
-    c_outs = None
-    clear_variables(c_outs)
-    get_process_memory();
     return Yds,vtids
 
 
