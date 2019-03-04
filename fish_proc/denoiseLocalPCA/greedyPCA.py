@@ -308,7 +308,9 @@ def compute_svd(M,
 
     if method == 'vanilla':
         try:
-            U, s, Vt = np.linalg.svd(M, full_matrices=False)
+            # U, s, Vt = np.linalg.svd(M, full_matrices=False)
+            n_components = np.min(M.shape)//2
+            U, s, Vt = randomized_svd(M, n_components=n_components)
         except:
             print('SVD did not converge -- using truncted PCA at 2 components instead')
             if not os.path.isdir('SVD_error'):
