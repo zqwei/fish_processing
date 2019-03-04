@@ -168,11 +168,11 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
     U_mat = []
     V_mat = []
     mp_count = len(comps)
-    print(f'# of mp_count: {mp_count}')
     # ZW -- this is my multi-core implementation of parallel NMF on patches
     # ZW -- this might be optimizable?
     if mp_count>10000: # this is a random number, some reason this does not work due to the block size limitation
         from functools import partial
+        print(f'# of mp_count: {mp_count}')
         _ = partial(NMF_comps, length_cut=length_cut, Yt_r=Yt_r, model=model)
         pool = mp.Pool(processes=mp_count)
         individual_results = pool.map(_, comps)
@@ -876,7 +876,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         if pass_num > 1 and ii == 0:
             rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
             # a0 = a.copy();
-            
+
 
     # TF on temporal components
     c_tf = [];
