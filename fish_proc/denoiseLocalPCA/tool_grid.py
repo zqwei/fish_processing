@@ -194,7 +194,7 @@ def denoise_dx_tiles(W,
                      U_update=False,
                      min_rank=1,
                      stim_knots=None,
-                     stim_delta=200):
+                     stim_delta=200, is_single_core=False):
     dims = W.shape
     W_ = split_image_into_blocks(W,nblocks=nblocks)
     dW_,rank_W_ = run_single(W_,
@@ -203,7 +203,7 @@ def denoise_dx_tiles(W,
                              fudge_factor=fudge_factor,
                              mean_th_factor=mean_th_factor,
                              U_update=U_update,
-                             min_rank=min_rank)
+                             min_rank=min_rank, is_single_core=is_single_core)
     dims_ = list(map(np.shape,dW_))
     dW_ = combine_blocks(dims,dW_,list_order='C')
     if dx ==1:
@@ -222,7 +222,7 @@ def denoise_dx_tiles(W,
                                  fudge_factor=fudge_factor,
                                  mean_th_factor=mean_th_factor,
                                  U_update=U_update,
-                                 min_rank=min_rank)
+                                 min_rank=min_rank, is_single_core=is_single_core)
     dims_rs = list(map(np.shape,dW_rs))
     dW_rs = combine_blocks(drs,dW_rs,list_order='C')
 
@@ -240,7 +240,7 @@ def denoise_dx_tiles(W,
                                  fudge_factor=fudge_factor,
                                  mean_th_factor=mean_th_factor,
                                  U_update=U_update,
-                                 min_rank=min_rank)
+                                 min_rank=min_rank, is_single_core=is_single_core)
     dims_cs = list(map(np.shape,dW_cs))
     dW_cs = combine_blocks(dcs,dW_cs,list_order='C')
 
@@ -258,7 +258,7 @@ def denoise_dx_tiles(W,
                              fudge_factor=fudge_factor,
                              mean_th_factor=mean_th_factor,
                              U_update=U_update,
-                             min_rank=min_rank)
+                             min_rank=min_rank, is_single_core=is_single_core)
     dims_rcs = list(map(np.shape,dW_rcs))
     dW_rcs = combine_blocks(drcs,dW_rcs,list_order='C')
 
@@ -337,7 +337,8 @@ def run_single(Y,
                U_update=False,
                min_rank=1,
                stim_knots=None,
-               stim_delta=200):
+               stim_delta=200,
+               is_single_core=False):
     """
     Run denoiser in each movie in the list Y.
     Inputs:

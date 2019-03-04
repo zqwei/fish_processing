@@ -29,7 +29,7 @@ def temporal(W,
              U_update=False,
              min_rank=1,
              stim_knots=None,
-             stim_delta=200):
+             stim_delta=200, is_single_core=False):
     """
     Calls greedy temporal denoiser in pixel neighborhood
     """
@@ -45,7 +45,7 @@ def temporal(W,
                                               U_update=U_update,
                                               min_rank=min_rank,
                                               stim_knots=stim_knots,
-                                              stim_delta=stim_delta)
+                                              stim_delta=stim_delta, is_single_core=is_single_core)
     print('Run_time: %f'%(time.time()-start))
     return mov_d, ranks
 
