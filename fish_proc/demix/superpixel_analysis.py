@@ -4,9 +4,7 @@
 
 import time
 import mkl
-print(f'The maximum threads required at bsub: {mkl.get_max_threads()}')
 mkl.set_num_threads(100)
-print(f'The maximum physical threads can be used: {mkl.get_max_threads()}')
 import numpy as np
 import networkx as nx
 from ..utils.memory import get_process_memory, clear_variables
@@ -782,7 +780,6 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     For parameters and output, please refer to demix function (demixing pipeline for low rank data).
     """
     # ZW -- make use of the sparse matrix can save memory, but some cases, it is quite slow in compuations.....
-    print(f'The maximum physical threads can be used: {mkl.get_max_threads()}')
     Yd_min = Yd.min();
     if Yd_min < 0:
         Yd_min_pw = Yd.min(axis=-1, keepdims=True);
