@@ -798,7 +798,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     patch_ref_mat = np.array(range(num_patch)).reshape(height_num, width_num, order="F");
 
     for ii in range(pass_num):
-        print("start " + str(ii+1) + " pass!");
+        print("start " + str(ii+1) + " pass!", flush=True);
         if ii > 0:
             if bg:
                 Yd_res = reconstruct(Yd, a, c, b, fb, ff);
@@ -810,13 +810,13 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
                 Yt = threshold_data(Yd, th=th[ii]);
             else:
                 Yt = Yd.copy();
-        print("Get threshould data.....")
+        print("Get threshould data.....", flush=True)
         start = time.time();
         if num_plane > 1:
-            print("3d data!");
+            print("3d data!", flush=True);
             connect_mat_1, idx, comps, permute_col = find_superpixel_3d(Yt,num_plane,cut_off_point[ii],length_cut[ii]);
         else:
-            print("find superpixels!")
+            print("find superpixels!", flush=True)
             connect_mat_1, idx, comps, permute_col = find_superpixel(Yt,cut_off_point[ii],length_cut[ii]);
         print("time: " + str(time.time()-start));
 
@@ -824,19 +824,19 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             continue
 
         start = time.time();
-        print("rank 1 svd!")
+        print("rank 1 svd!", flush=True)
         if ii > 0:
             c_ini, a_ini, _, _ = spatial_temporal_ini(Yt, comps, idx, length_cut[ii], bg=False);
         else:
             c_ini, a_ini, ff, fb = spatial_temporal_ini(Yt, comps, idx, length_cut[ii], bg=bg);
-        print("time: " + str(time.time()-start));
+        print("time: " + str(time.time()-start), flush=True);
         unique_pix = np.asarray(np.sort(np.unique(connect_mat_1)),dtype="int");
         unique_pix = unique_pix[np.nonzero(unique_pix)];
         brightness_rank_sup = order_superpixels(permute_col, unique_pix, a_ini, c_ini);
         pure_pix = [];
 
         start = time.time();
-        print("find pure superpixels!")
+        print("find pure superpixels!", flush=True)
         # this `for loop` is fast enough currently
         for kk in range(num_patch):
             pos = np.where(patch_ref_mat==kk);
@@ -861,8 +861,8 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         else:
             a, c, b, normalize_factor, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=True);
 
-        print("time: " + str(time.time()-start));
-        print("start " + str(ii+1) + " pass iteration!")
+        print("time: " + str(time.time()-start), flush=True);
+        print("start " + str(ii+1) + " pass iteration!", flush=True)
         if ii == pass_num - 1:
             maxiter = max_iter_fin;
         else:
@@ -877,7 +877,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             a, c, b, fb, ff, res, corr_img_all_r, num_list = update_AC_l2_Y(Yd.reshape(np.prod(dims),-1,order="F"), normalize_factor, a, c, b, dims,
                                         corr_th_fix, maxiter=maxiter, tol=1e-8, update_after=update_after,
                                         merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, max_allow_neuron_size=max_allow_neuron_size);
-        print("time: " + str(time.time()-start));
+        print("time: " + str(time.time()-start), flush=True);
         superpixel_rlt.append({'connect_mat_1':connect_mat_1, 'pure_pix':pure_pix, 'unique_pix':unique_pix, 'brightness_rank':brightness_rank, 'brightness_rank_sup':brightness_rank_sup});
         if pass_num > 1 and ii == 0:
             rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
@@ -894,7 +894,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         for ii in range(c.shape[1]):
             c_tf = np.hstack((c_tf, l1_tf(c[:,ii], sigma[ii])));
         c_tf = c_tf.reshape(T,int(c_tf.shape[0]/T),order="F");
-    print("time: " + str(time.time()-start));
+    print("time: " + str(time.time()-start), flush=True);
 
     fin_rlt = {'a':a, 'c':c, 'c_tf':c_tf, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
 
