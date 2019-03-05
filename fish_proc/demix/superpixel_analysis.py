@@ -1,4 +1,12 @@
+# ZW -- indicated the comments by Ziqiang Wei
+# email : weiz@janelia.hhmi.org
+# explictly mkl support
+
 import time
+import mkl
+print(f'The maximum threads required at bsub: {mkl.get_max_threads()}')
+mkl.set_num_threads(100)
+print(f'The maximum physical threads can be used: {mkl.get_max_threads()}')
 import numpy as np
 import networkx as nx
 from ..utils.memory import get_process_memory, clear_variables
@@ -8,8 +16,6 @@ from scipy.sparse import csr_matrix, issparse, triu, csc_matrix
 from scipy.stats import rankdata
 import scipy.ndimage
 
-# ZW -- indicated the comments by Ziqiang Wei
-# email : weiz@janelia.hhmi.org
 
 def threshold_data(Yd, th=2):
     # ZW -- this may take long time to compute according to size of matrix -- need to optimize
@@ -168,9 +174,10 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
     U_mat = []
     V_mat = []
     mp_count = len(comps)
+    print(f'# of superpixels: {mp_count}')
     # ZW -- this is my multi-core implementation of parallel NMF on patches
     # ZW -- this might be optimizable?
-    if mp_count>10000: # this is a random number, some reason this does not work due to the block size limitation
+    if False: # this is a random number, some reason this does not work due to the block size limitation
         from functools import partial
         print(f'# of mp_count: {mp_count}')
         _ = partial(NMF_comps, length_cut=length_cut, Yt_r=Yt_r, model=model)
@@ -698,6 +705,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
         b = np.maximum(0, uv_mean-(a*(c.mean(axis=0,keepdims=True))).sum(axis=1,keepdims=True));
 
         if update_after and ((iters+1) % update_after == 0):
+            print('merge components')
             corr_img_all = vcorrcoef_Y(U/normalize_factor, c);
             rlt = merge_components_Y(a,c,corr_img_all, U, normalize_factor,num_list,patch_size,merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr);
             flag = isinstance(rlt, int);
@@ -774,6 +782,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     For parameters and output, please refer to demix function (demixing pipeline for low rank data).
     """
     # ZW -- make use of the sparse matrix can save memory, but some cases, it is quite slow in compuations.....
+    print(f'The maximum physical threads can be used: {mkl.get_max_threads()}')
     Yd_min = Yd.min();
     if Yd_min < 0:
         Yd_min_pw = Yd.min(axis=-1, keepdims=True);
