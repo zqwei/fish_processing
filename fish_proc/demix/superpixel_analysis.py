@@ -470,7 +470,7 @@ def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size
         # ZW -- this can be parallelized
         for comp in comps:
             comp=list(comp);
-            print("merge" + str(num_list[comp]+1));
+            print("merge" + str(num_list[comp]+1), flush=True);
             a_zero = np.zeros([a.shape[0],1]);
             a_temp = a[:,comp];
             mask_temp = np.where(a_temp.sum(axis=1,keepdims=True) > 0)[0];
@@ -587,7 +587,7 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
     f = np.ones([c.shape[0],1]);
     num_list = np.arange(K);
 
-    print('start update_AC_l2_Y....')
+    print('start update_AC_l2_Y....', flush=True)
 
     for iters in range(maxiter):
         start = time.time();
@@ -614,7 +614,7 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
                 corr_img_all = rlt[3];
                 num_list = rlt[4];
             else:
-                print("no merge!");
+                print("no merge!", flush=True);
             mask_a = (a>0)*1;
             corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
             mask_a = make_mask(corr_img_all_r, corr_th_fix, mask_a, num_plane, max_allow_neuron_size=max_allow_neuron_size);
@@ -631,7 +631,7 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
         # if iters==0:
         #     res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
         #     print(res[iters])
-        print("time: " + str(time.time()-start))
+        print("time: " + str(time.time()-start), flush=True)
         #if iters > 0:
         #	if abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
         #		break;
@@ -678,7 +678,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
     corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
     mask_ab = np.hstack((mask_a,fg));
 
-    print('start update_AC_bg_l2_Y....')
+    print('start update_AC_bg_l2_Y....', flush=True)
     for iters in range(maxiter):
         start = time.time();
 
@@ -703,7 +703,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
         b = np.maximum(0, uv_mean-(a*(c.mean(axis=0,keepdims=True))).sum(axis=1,keepdims=True));
 
         if update_after and ((iters+1) % update_after == 0):
-            print('merge components')
+            print('merge components', flush=True)
             corr_img_all = vcorrcoef_Y(U/normalize_factor, c);
             rlt = merge_components_Y(a,c,corr_img_all, U, normalize_factor,num_list,patch_size,merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr);
             flag = isinstance(rlt, int);
@@ -713,7 +713,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
                 corr_img_all = rlt[3];
                 num_list = rlt[4];
             else:
-                print("no merge!");
+                print("no merge!", flush=True);
             mask_a = (a>0)*1;
             corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
             mask_a = make_mask(corr_img_all_r, corr_th_fix, mask_a, num_plane, max_allow_neuron_size=max_allow_neuron_size);
@@ -731,7 +731,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
         # if iters==0:
         #     res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
         #     print(res[iters])
-        print("time: " + str(time.time()-start));
+        print("time: " + str(time.time()-start), flush=True);
         #if iters > 0:
         #	if abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
         #		break;
@@ -761,11 +761,11 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
 
 def reconstruct(Yd, spatial_components, temporal_components, background_components, fb=None, ff=None):
     dims = Yd.shape;
-    print('start to reconstruct movie....')
+    print('start to reconstruct movie....', flush=True)
     ss = csr_matrix(spatial_components)
     st = csr_matrix(temporal_components)
     recon_ = ss.dot(st.T).toarray()+background_components
-    print('start to compute residuals....')
+    print('start to compute residuals....', flush=True)
     if fb is not None:
         recon_ = recon_ + csr_matrix(fb).dot(csr_matrix(ff).T).toarray()
     return Yd - np.asarray(recon_).reshape(dims, order='F')
@@ -861,7 +861,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         else:
             a, c, b, normalize_factor, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=True);
 
-        print("time: " + str(time.time()-start), flush=True);
+        print("time: " + str(time.time()-start));
         print("start " + str(ii+1) + " pass iteration!", flush=True)
         if ii == pass_num - 1:
             maxiter = max_iter_fin;
