@@ -11,9 +11,20 @@ import numpy as np
 def pos_sig_correction(mov, axis_):
     return mov - (mov).min(axis=axis_, keepdims=True)
 
-def recompute_C_matrix(sig, A):
+def recompute_C_matrix_sparse(sig, A):
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.linalg import spsolve
     d1, d2, T = sig.shape
-    return np.linalg.inv(np.array(A.T.dot(A))).dot(A.T.dot(np.reshape(sig, (d1*d2,T), order='F')))
+    sig = csr_matrix(np.reshape(sig, (d1*d2,T), order='F'))
+    A = csr_matrix(A)
+    return np.asarray(spsolve(A, sig).todense())
+
+def recompute_C_matrix(sig, A, issparse=False):
+    if not issparse:
+        d1, d2, T = sig.shape
+        return np.linalg.inv(np.array(A.T.dot(A))).dot(A.T.dot(np.reshape(sig, (d1*d2,T), order='F')))
+    else:
+        return recompute_C_matrix_sparse(sig, A)
 
 def recompute_nmf(rlt_, mov, comp_thres=0):
     b = rlt_['fin_rlt']['b']
