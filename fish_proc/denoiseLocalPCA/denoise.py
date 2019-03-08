@@ -50,11 +50,11 @@ def temporal(W,
     return mov_d, ranks
 
 
-def noise_level(mov_wf,
-                range_ff =[0.25,0.5]):
-    """
-    Calculate noise level in movie pixels
-    """
-    noise_level = spatial_filtering.noise_estimator(mov_wf,
-                                                    range_ff=range_ff)
-    return noise_level
+# def noise_level(mov_wf,
+#                 range_ff =[0.25,0.5]):
+#     """
+#     Calculate noise level in movie pixels
+#     """
+#     noise_level = spatial_filtering.noise_estimator(mov_wf,
+#                                                     range_ff=range_ff)
+#     return noise_level

@@ -15,8 +15,6 @@ def noise_estimator(Y,range_ff=[0.25,0.5],method='logmexp'):
         ind1 = ff > range_ff[0]
         ind2 = ff < range_ff[1]
         ind = np.logical_and(ind1, ind2)
-        #Pls.append(Pxx)
-        #ffs.append(ff)
         Pxx_ind = Pxx[ind]
         sn = {
             'mean': lambda Pxx_ind: np.sqrt(np.mean(np.divide(Pxx_ind, 2))),
@@ -105,7 +103,6 @@ def spatial_filter_block(data,sn=None,maps=None,neuron_indx=None):
     D = np.diag(sn**2)
     data_r = data_.reshape((np.prod(dims[:2]),dims[2]),order='F')
     Cy = covariance_matrix(data_r)
-
     Cy = Cy.copy()
     try:
         if neuron_indx is None:
@@ -113,7 +110,7 @@ def spatial_filter_block(data,sn=None,maps=None,neuron_indx=None):
         else:
             hat_k = np.linalg.inv(Cy).dot(Cy[neuron_indx,:]-D[neuron_indx,:])
     except np.linalg.linalg.LinAlgError as err:
-        print('Singular matrix(?) bye bye')
+        print('Singular matrix--')
         return data , []
     if neuron_indx is None:
         y_ = hat_k.dot(data_r)
@@ -122,9 +119,6 @@ def spatial_filter_block(data,sn=None,maps=None,neuron_indx=None):
         y_[neuron_indx,:] = hat_k[:,np.newaxis].T.dot(data_r)
     y_hat = y_.reshape(dims[:2]+(dims[2],),order='F')
     y_hat = y_hat + mean_
-
-    # Cn_y = cm.local_correlations(data)
     Cn_y = local_correlations_fft(data)
-    # Cn_yh = cm.local_correlations(y_hat)
     Cn_yh = local_correlations_fft(y_hat)
     return y_hat , hat_k
