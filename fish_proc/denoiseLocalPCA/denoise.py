@@ -29,11 +29,13 @@ def temporal(W,
              U_update=False,
              min_rank=1,
              stim_knots=None,
-             stim_delta=200, is_single_core=False):
+             stim_delta=200, is_single_core=False, mask=None):
     """
     Calls greedy temporal denoiser in pixel neighborhood
     """
     start = time.time()
+    if mask is not None:
+        W[mask.squeeze()] = 0
     mov_d, ranks = tool_grid.denoise_dx_tiles(W,
                                               nblocks=nblocks,
                                               dx=dx,
@@ -46,7 +48,7 @@ def temporal(W,
                                               min_rank=min_rank,
                                               stim_knots=stim_knots,
                                               stim_delta=stim_delta, is_single_core=is_single_core)
-    print('Run_time: %f'%(time.time()-start))
+    print('Run_time: %f'%(time.time()-start), flush=True)
     return mov_d, ranks
 
 
