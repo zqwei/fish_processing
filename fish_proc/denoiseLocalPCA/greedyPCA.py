@@ -504,11 +504,11 @@ def denoise_patch(M,
         ranks = np.nan
     #ranks = np.where(np.logical_or(vtids[0, :] >= 1, vtids[1, :] == 1))[0]
     if np.all(ranks == np.nan):
-        print('M rank Empty')
+        print('M rank Empty', flush=True)
         rlen = 0
     else:
         rlen = vtids[0,ranks].sum() #len(ranks)
-        print('\tM\trank: %d\trun_time: %f'%(rlen,time.time()-start))
+        print('\tM\trank: %d\trun_time: %f'%(rlen,time.time()-start), flush=True)
     return Yd, rlen
 
 
