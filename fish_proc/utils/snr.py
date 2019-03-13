@@ -76,3 +76,61 @@ def local_correlations_fft_slice_sum(imgs, sz=np.ones((3,3)), opencv=True, ndim=
         else:
             sum_ += convolve(Y, sz[np.newaxis, :], mode='constant')*img
     return sum_[np.newaxis, :, :],
+
+
+def local_correlations_fft_single_core(Y, eight_neighbours=True, swap_dim=True, opencv=True):
+	"""Computes the correlation image for the input dataset Y using a faster FFT based method, adapt from caiman
+	Parameters:
+	-----------
+	Y:  np.ndarray (3D or 4D)
+	    Input movie data in 3D or 4D format
+	eight_neighbours: Boolean
+	    Use 8 neighbors if true, and 4 if false for 3D data (default = True)
+	    Use 6 neighbors for 4D data, irrespectively
+	swap_dim: Boolean
+	    True indicates that time is listed in the last axis of Y (matlab format)
+	    and moves it in the front
+	opencv: Boolean
+	    If True process using open cv method
+	Returns:
+	--------
+	Cn: d1 x d2 [x d3] matrix, cross-correlation with adjacent pixels
+	"""
+
+	if swap_dim:
+		Y = np.transpose(
+			Y, tuple(np.hstack((Y.ndim - 1, list(range(Y.ndim))[:-1]))))
+
+	Y = Y.astype('float32')
+	Y -= np.mean(Y, axis=0)
+	Ystd = np.std(Y, axis=0)
+	Ystd[Ystd == 0] = np.inf
+	Y /= Ystd
+
+	if Y.ndim == 4:
+		if eight_neighbours:
+			sz = np.ones((3, 3, 3), dtype='float32')
+			sz[1, 1, 1] = 0
+		else:
+			sz = np.array([[[0, 0, 0], [0, 1, 0], [0, 0, 0]],
+							[[0, 1, 0], [1, 0, 1], [0, 1, 0]],
+							[[0, 0, 0], [0, 1, 0], [0, 0, 0]]], dtype='float32')
+	else:
+		if eight_neighbours:
+			sz = np.ones((3, 3), dtype='float32')
+			sz[1, 1] = 0
+		else:
+			sz = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype='float32')
+
+	if opencv and Y.ndim == 3:
+		Yconv = Y.copy()
+		for idx, img in enumerate(Yconv):
+			Yconv[idx] = cv2.filter2D(img, -1, sz, borderType=0)
+		MASK = cv2.filter2D(
+			np.ones(Y.shape[1:], dtype='float32'), -1, sz, borderType=0)
+	else:
+		Yconv = convolve(Y, sz[np.newaxis, :], mode='constant')
+		MASK = convolve(
+			np.ones(Y.shape[1:], dtype='float32'), sz, mode='constant')
+	Cn = np.mean(Yconv * Y, axis=0) / MASK
+	return Cn
