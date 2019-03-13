@@ -328,6 +328,27 @@ def combine_4xd(nblocks,dW_,dW_rs,dW_cs,dW_rcs,dims_,dims_rs,dims_cs,dims_rcs,pl
     return W_hat
 
 
+def combine_2xd(nblocks,dW_,dW_rcs,dims_,dims_rcs):
+    dims = dW_.shape
+    row_array,col_array = tile_grids(dims,nblocks)
+    r_offset = vector_offset(row_array)
+    c_offset = vector_offset(col_array)
+    r1, r2 = (row_array[1:]-r_offset)[[0,-1]]
+    c1, c2 = (col_array[1:]-c_offset)[[0,-1]]
+    drcs    =   dW_rcs.shape
+    ak3 = np.zeros(dims[:2]).astype('float32')
+    ak0 = pyramid_tiles(dims, dims_, list_order='C')
+    ak3[r1:r2,c1:c2] = pyramid_tiles(drcs, dims_rcs, list_order='C')
+    ak0[[0,-1],:]=1
+    ak0[:,[0,-1]]=1
+    W3 = np.zeros(dims).astype('float32')
+    W3[r1:r2,c1:c2,:] = dW_rcs
+    W_hat = ak0[:,:,np.newaxis]*dW_
+    W_hat += ak3[:,:,np.newaxis]*W3
+    W_hat /= (ak0+ak3)[:,:,np.newaxis]
+    return W_hat
+
+
 def run_single(Y,
                maxlag=5,
                confidence=0.999,
