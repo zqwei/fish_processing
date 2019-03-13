@@ -36,6 +36,7 @@ def temporal(W,
     start = time.time()
     if mask is not None:
         W[mask.squeeze()] = 0
+    print(W.dtype)
     mov_d, ranks = tool_grid.denoise_dx_tiles(W,
                                               nblocks=nblocks,
                                               dx=dx,
@@ -50,13 +51,3 @@ def temporal(W,
                                               stim_delta=stim_delta, is_single_core=is_single_core)
     print('Run_time: %f'%(time.time()-start), flush=True)
     return mov_d, ranks
-
-
-# def noise_level(mov_wf,
-#                 range_ff =[0.25,0.5]):
-#     """
-#     Calculate noise level in movie pixels
-#     """
-#     noise_level = spatial_filtering.noise_estimator(mov_wf,
-#                                                     range_ff=range_ff)
-#     return noise_level
