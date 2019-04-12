@@ -59,7 +59,7 @@ def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, opencv=True,
             sz[1, 1] = 0
         else:
             sz = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype='float32')
-    
+
     if is_mp:
         sum_, = parallel_to_chunks(local_correlations_fft_slice_sum, Y, sz=sz, opencv=opencv, ndim=Y.ndim)
         MASK = convolve(np.ones(Y.shape[1:], dtype='float32'), sz, mode='constant')
@@ -78,7 +78,7 @@ def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, opencv=True,
         Cn = np.mean(Yconv * Y, axis=0) / MASK
         return Cn
 
-    
+
 def local_correlations_fft_slice_sum(imgs, sz=np.ones((3,3)), opencv=True, ndim=3):
     import cv2
     from scipy.ndimage.filters import convolve
@@ -87,6 +87,5 @@ def local_correlations_fft_slice_sum(imgs, sz=np.ones((3,3)), opencv=True, ndim=
         if opencv and ndim==3:
             sum_ += cv2.filter2D(img, -1, sz, borderType=0)*img
         else:
-            sum_ += convolve(Y, sz[np.newaxis, :], mode='constant')*img
+            sum_ += convolve(img, sz[np.newaxis, :], mode='constant')*img
     return sum_[np.newaxis, :, :],
-
