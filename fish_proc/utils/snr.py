@@ -87,5 +87,5 @@ def local_correlations_fft_slice_sum(imgs, sz=np.ones((3,3)), opencv=True, ndim=
         if opencv and ndim==3:
             sum_ += cv2.filter2D(img, -1, sz, borderType=0)*img
         else:
-            sum_ += convolve(img, sz[np.newaxis, :], mode='constant')*img
+            sum_ += convolve(img, sz, mode='constant')*img
     return sum_[np.newaxis, :, :],
