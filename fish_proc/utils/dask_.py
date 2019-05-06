@@ -40,6 +40,11 @@ def get_jobqueue_cluster(walltime='12:00', cores=1, local_directory=None, memory
     return cluster
 
 
+def get_local_cluster():
+    from dask.distributed import LocalCluster
+    return LocalCluster()
+
+
 def setup_drmma_cluster():
     """
     Instatiate a DRMAACluster for use with the LSF scheduler on the Janelia Research Campus compute cluster. This is a
@@ -74,7 +79,7 @@ def setup_drmma_cluster():
     return cluster
 
 
-def setup_workers(numCore):
+def setup_cluster_workers(numCore):
     cluster = get_jobqueue_cluster()
     from dask.distributed import Client
     client = Client(cluster)
@@ -85,6 +90,19 @@ def setup_workers(numCore):
 def setup_local_worker():
     from dask.distributed import Client
     return Client()
+
+
+def setup_workers(numCore, is_local=False):
+    from dask.distributed import Client
+    if is_local:
+        cluster = get_local_cluster()
+        client = Client(cluster)
+        cluster.start_worker(ncores=numCore)
+    else:
+        cluster = get_jobqueue_cluster()
+        client = Client(cluster)
+        cluster.start_workers(numCore)
+    return cluster, client
 
 
 def terminate_workers(cluster, client):
