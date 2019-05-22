@@ -42,7 +42,7 @@ def get_jobqueue_cluster(walltime='12:00', cores=1, local_directory=None, memory
 
 def get_local_cluster():
     from dask.distributed import LocalCluster
-    return LocalCluster()
+    return LocalCluster(processes=False)
 
 
 def setup_drmma_cluster():
@@ -92,12 +92,11 @@ def setup_local_worker():
     return Client()
 
 
-def setup_workers(numCore, is_local=False):
+def setup_workers(numCore=70, is_local=False):
     from dask.distributed import Client
     if is_local:
         cluster = get_local_cluster()
         client = Client(cluster)
-        cluster.start_worker(ncores=numCore)
     else:
         cluster = get_jobqueue_cluster()
         client = Client(cluster)
