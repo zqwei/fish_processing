@@ -40,9 +40,12 @@ def get_jobqueue_cluster(walltime='12:00', cores=1, local_directory=None, memory
     return cluster
 
 
-def get_local_cluster():
+def get_local_cluster(dask_tmp=None, memory_limit='auto'):
     from dask.distributed import LocalCluster
-    return LocalCluster(processes=False)
+    if dask_tmp is None:
+        return LocalCluster(processes=False, memory_limit=memory_limit)
+    else:
+        return LocalCluster(processes=False, local_dir=dask_tmp, memory_limit=memory_limit)
 
 
 def setup_drmma_cluster():
@@ -54,7 +57,7 @@ def setup_drmma_cluster():
     """
     from dask_drmaa import DRMAACluster
     import os
-    
+
     # we need these on each worker to prevent multithreaded numerical operations
     pre_exec =('export NUM_MKL_THREADS=1',
                'export OPENBLAS_NUM_THREADS=1',
@@ -92,10 +95,10 @@ def setup_local_worker():
     return Client()
 
 
-def setup_workers(numCore=70, is_local=False):
+def setup_workers(numCore=70, is_local=False, dask_tmp=None, memory_limit='auto'):
     from dask.distributed import Client
     if is_local:
-        cluster = get_local_cluster()
+        cluster = get_local_cluster(dask_tmp=dask_tmp, memory_limit=memory_limit)
         client = Client(cluster)
     else:
         cluster = get_jobqueue_cluster()
@@ -108,16 +111,16 @@ def terminate_workers(cluster, client):
     client.close()
     cluster.close()
 
-    
+
 def warn_on_large_chunks(x):
     import itertools
     shapes = list(itertools.product(*x.chunks))
     nbytes = [x.dtype.itemsize * np.prod(shape) for shape in shapes]
     if any(nb > 1e9 for nb in nbytes):
         warnings.warn("Array contains very large chunks")
-        
 
-        
+
+
 if __name__ == '__main__':
     print('Testing setup of Dask---')
     cluster, client = setup_workers(10)
