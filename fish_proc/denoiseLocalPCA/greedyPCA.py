@@ -4,7 +4,6 @@ import os
 from scipy.stats import norm
 from sklearn.utils.extmath import randomized_svd
 from sklearn import preprocessing
-import cvxpy as cp
 import time
 import concurrent
 import multiprocessing
@@ -1186,6 +1185,7 @@ def c_l1tf_v_hat(v,
     Include optimal lagrande multiplier for constraint
 
     """
+    import cvxpy as cp
     print('c_l1tf_v_hat') if verbose else 0
     if np.abs(sigma)<=1e-3:
         print('Do not denoise (high SNR: noise_level=%.3e)'%
@@ -1222,6 +1222,7 @@ def c_l1_u_hat(y,
     if problem infeasible:
         set U = regression Vt onto Y and \nu = 0
     """
+    import cvxpy as cp
     print('c_l1_u_hat') if verbose else 0
     num_components = V_TF.shape[0]
     u_hat = cp.Variable(num_components)
@@ -1250,6 +1251,7 @@ def c_update_V(v,
     # Fixing U we have
     min ||v-v_hat||_2^2 + lambda_i||D^2V_i||_1
     """
+    import cvxpy as cp
     T = len(v)
     diff = trefide.difference_operator(T)
     print(lambda_) if verbose else 0
@@ -1310,6 +1312,7 @@ def c_update_U(y,
     for each pixel
     min  ||y_j-u_j*v||_2^2 + nu_j ||u_j||_1.
     """
+    import cvxpy as cp
     num_components = V_TF.shape[0]
     u_hat = cp.Variable(num_components)
     if nu_ == 0:

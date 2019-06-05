@@ -1,4 +1,3 @@
-import cvxpy as cp
 import numpy as np
 import scipy as sp
 from .tools import butter_highpass
@@ -525,7 +524,8 @@ def constrained_l1tf(signal,
             Optimal Lagrange multipliers used to link constrained and lagrangian
             formulations of the trend filtering optimization
     """
-
+    import cvxpy as cp
+    
     print('Auto detect noise level') if verbose else 0
     if stdv is None:
         stdv = estimate_noise([signal],
