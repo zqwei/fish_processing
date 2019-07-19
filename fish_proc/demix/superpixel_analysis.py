@@ -1,20 +1,15 @@
 # ZW -- indicated the comments by Ziqiang Wei
 # email : weiz@janelia.hhmi.org
-# explictly mkl support
-
-import time
 import numpy as np
 import networkx as nx
-from ..utils.memory import get_process_memory, clear_variables
+from ..utils.memory import clear_variables
 from sklearn.decomposition import NMF, TruncatedSVD
-import multiprocessing as mp
 from scipy.sparse import csr_matrix, issparse, triu, csc_matrix
 from scipy.stats import rankdata
 import scipy.ndimage
 
 
 def threshold_data(Yd, th=2):
-    # ZW -- this may take long time to compute according to size of matrix -- need to optimize
     Yd_median = np.median(Yd, axis=-1, keepdims=True)
     Yd_mad = np.median(abs(Yd - Yd_median), axis=-1, keepdims=True)
     Yt = Yd-(Yd_median + th*Yd_mad)
@@ -23,7 +18,6 @@ def threshold_data(Yd, th=2):
 
 
 def find_superpixel(Yt, cut_off_point, length_cut):
-    # ZW -- this may take long time to compute according to size of matrix -- need to optimize
     dims = Yt.shape;
     ref_mat = np.arange(np.prod(dims[:-1])).reshape(dims[:-1],order='F')
     ######### calculate correlation ############
@@ -60,11 +54,9 @@ def find_superpixel(Yt, cut_off_point, length_cut):
     B_r = ref_mat[(temp_r[0] + 1, temp_r[1] + 1)]
     A = np.concatenate([A_v,A_h,A_l,A_r])
     B = np.concatenate([B_v,B_h,B_l,B_r])
-    print('Start with finding superpixels.....')
     ########### form connected componnents #########
     G = nx.Graph();
     G.add_edges_from(list(zip(A, B)))
-    print('Get components.....')
     comps=list(nx.connected_components(G))
     connect_mat=np.zeros(np.prod(dims[:2]));
     idx=0;
@@ -82,22 +74,18 @@ def find_superpixel(Yt, cut_off_point, length_cut):
 
 
 def find_superpixel_3d(Yt, num_plane, cut_off_point, length_cut):
-    # ZW -- this may take long time to compute according to size of matrix -- need to optimize
     dims = Yt.shape;
     Yt_3d = Yt.reshape(dims[0],int(dims[1]/num_plane),num_plane,dims[2],order="F");
     dims = Yt_3d.shape;
     ref_mat = np.arange(np.prod(dims[:-1])).reshape(dims[:-1],order='F');
     ######### calculate correlation ############
-    # ZW -- better optimizaiton of memory here
     w_mov = (Yt_3d.transpose(3,0,1,2) - np.mean(Yt_3d, axis=3)) / np.std(Yt_3d, axis=3);
     w_mov[np.isnan(w_mov)] = 0;
-    # ZW -- this one need to be speed up ----
     rho_v = np.mean(np.multiply(w_mov[:, :-1, :], w_mov[:, 1:, :]), axis=0)
     rho_h = np.mean(np.multiply(w_mov[:, :, :-1], w_mov[:, :, 1:]), axis=0)
     rho_l = np.mean(np.multiply(w_mov[:, 1:, :-1], w_mov[:, :-1, 1:]), axis=0)
     rho_r = np.mean(np.multiply(w_mov[:, :-1, :-1], w_mov[:, 1:, 1:]), axis=0)
     rho_u = np.mean(np.multiply(w_mov[:, :, :, :-1], w_mov[:, :, :, 1:]), axis=0)
-    # ZW -- memory leak --
     w_mov = None
     clear_variables(w_mov)
     # get correlation mats
@@ -160,8 +148,6 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
     """
     Apply rank-1-NMF to find spatial and temporal initialization for each superpixel in Yt.
     """
-    # ZW -- maybe also find fast rank-1 NMF implementations other than that in sklearn?
-    # ZW -- this may take long time to compute according to size of matrix -- need to optimize
     dims = Yt.shape;
     T = dims[-1];
     Yt_r = Yt.reshape(np.prod(dims[:-1]),T,order = "F");
@@ -169,31 +155,13 @@ def spatial_temporal_ini(Yt, comps, idx, length_cut, bg=False):
     model = NMF(n_components=1, init='custom')
     U_mat = []
     V_mat = []
-    mp_count = len(comps)
-    print(f'# of superpixels: {mp_count}')
-    # ZW -- this is my multi-core implementation of parallel NMF on patches
-    # ZW -- this might be optimizable?
-    if False: # this is a random number, some reason this does not work due to the block size limitation
-        from functools import partial
-        print(f'# of mp_count: {mp_count}')
-        _ = partial(NMF_comps, length_cut=length_cut, Yt_r=Yt_r, model=model)
-        pool = mp.Pool(processes=mp_count)
-        individual_results = pool.map(_, comps)
-        pool.close()
-        pool.join()
-        for res_ in individual_results:
-            u_, v_ = res_
-            if u_ is not None:
-                U_mat.append(u_)
-                V_mat.append(v_)
-    else:
-        for ii, comp in enumerate(comps):
-            if(len(comp) > length_cut):
-                y_temp = Yt_r[list(comp),:].astype('float')
-                u_ = np.zeros((np.prod(dims[:-1]),1)).astype('float32')
-                u_[list(comp)] = model.fit_transform(y_temp, W=np.array(y_temp.mean(axis=1)),H = np.array(y_temp.mean(axis=0)))
-                U_mat.append(u_)
-                V_mat.append(model.components_.T)
+    for ii, comp in enumerate(comps):
+        if(len(comp) > length_cut):
+            y_temp = Yt_r[list(comp),:].astype('float')
+            u_ = np.zeros((np.prod(dims[:-1]),1)).astype('float32')
+            u_[list(comp)] = model.fit_transform(y_temp, W=np.array(y_temp.mean(axis=1)),H = np.array(y_temp.mean(axis=0)))
+            U_mat.append(u_)
+            V_mat.append(model.components_.T)
     if len(U_mat)>1:
         U_mat = np.concatenate(U_mat, axis=1)
         V_mat = np.concatenate(V_mat, axis=1)
@@ -248,7 +216,6 @@ def fast_sep_nmf(M, r, th, normalize=1):
     pure_pixels = [];
     if normalize == 1:
         M = M/np.sum(M, axis=0,keepdims=True);
-
     normM = np.sum(M**2, axis=0,keepdims=True);
     normM_orig = normM.copy();
     normM_sqrt = np.sqrt(normM);
@@ -256,20 +223,15 @@ def fast_sep_nmf(M, r, th, normalize=1):
     ii = 0;
     U = np.zeros([M.shape[0], r]);
     while ii < r and (normM_sqrt/nM).max() > th:
-        ## select the column of M with largest relative l2-norm
         temp = normM/normM_orig;
         pos = np.where(temp == temp.max())[1][0];
-        ## check ties up to 1e-6 precision
         pos_ties = np.where((temp.max() - temp)/temp.max() <= 1e-6)[1];
-
         if len(pos_ties) > 1:
             pos = pos_ties[np.where(normM_orig[0,pos_ties] == (normM_orig[0,pos_ties]).max())[0][0]];
-        ## update the index set, and extracted column
         pure_pixels.append(pos);
         U[:,ii] = M[:,pos].copy();
         for jj in range(ii):
             U[:,ii] = U[:,ii] - U[:,jj]*sum(U[:,jj]*U[:,ii])
-
         U[:,ii] = U[:,ii]/np.sqrt(sum(U[:,ii]**2));
         normM = np.maximum(0, normM - np.matmul(U[:,[ii]].T, M)**2);
         normM_sqrt = np.sqrt(normM);
@@ -308,7 +270,6 @@ def prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, U_mat, V_mat, mo
         initialization of constant background
     normalize_factor: std of Y
     """
-    # ZW -- this may take long time to compute according to size of matrix -- need to optimize
     dims = Yd.shape;
     T = dims[-1];
     Yd = Yd.reshape(np.prod(dims[:-1]),-1, order="F");
@@ -330,9 +291,7 @@ def prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, U_mat, V_mat, mo
     V_mat = V_mat*temp
     U_mat = U_mat/temp;
     if more:
-        start = time.time();
         normalize_factor = np.std(Yd, axis=1, keepdims=True)*T;
-        print(time.time()-start);
         B_mat = np.median(Yd, axis=1, keepdims=True);
         return U_mat, V_mat, B_mat, normalize_factor, brightness_rank
     else:
@@ -357,26 +316,22 @@ def make_mask(corr_img_all_r, corr, mask_a, num_plane=1,times=10,max_allow_neuro
                 while jj<=times:
                     labeled_array, num_features = scipy.ndimage.measurements.label(corr_img_all_r[:,:,kk,ii] > corr,structure=s);
                     u, indices, counts = np.unique(labeled_array*mask_a[:,:,kk,ii], return_inverse=True, return_counts=True);
-                    #print(u);
                     if len(u)==1:
                         labeled_array = np.zeros(labeled_array.shape);
                         if corr == 0 or corr == 1:
                             break;
                         else:
-                            print("corr too high!")
                             corr = np.maximum(0, corr - 0.1);
                             jj = jj+1;
                     else:
                         if num_features>1:
                             c = u[1:][np.argmax(counts[1:])];
-                            #print(c);
                             labeled_array = (labeled_array==c);
                             del(c);
 
                         if labeled_array.sum()/unit_length < max_allow_neuron_size or corr==1 or corr==0:
                             break;
                         else:
-                            print("corr too low!")
                             corr = np.minimum(1, corr + 0.1);
                             jj = jj+1;
                 mask_a[:,:,kk,ii] = labeled_array;
@@ -386,9 +341,7 @@ def make_mask(corr_img_all_r, corr, mask_a, num_plane=1,times=10,max_allow_neuro
 
 def delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, word):
     # delete those zero components
-    print(word);
     pos = np.where(temp)[0];
-    print("delete components" + str(num_list[pos]+1));
     corr_img_all_r = np.delete(corr_img_all_r, pos, axis=2);
     mask_a = np.delete(mask_a, pos, axis=1);
     a = np.delete(a, pos, axis=1);
@@ -411,38 +364,11 @@ def order_superpixels(permute_col, unique_pix, U_mat, V_mat):
     u_max = U_mat.max(axis=0);
     v_max = V_mat.max(axis=0);
     brightness = u_max * v_max;
-    # brightness_arg = np.argsort(-brightness); #
     brightness_rank = U_mat.shape[1] - rankdata(brightness,method="ordinal");
     return brightness_rank
 
 
-def l1_tf(y, sigma):
-    """
-    L1_trend filter to denoise the final temporal traces
-    """
-    import cvxpy as cvx
-    if np.abs(sigma/y.max())<=1e-3:
-        print('Do not denoise (high SNR: noise_level=%.3e)'%sigma);
-        return y
-    n = y.size
-    # Form second difference matrix.
-    D = (np.diag(2*np.ones(n),0)+np.diag(-1*np.ones(n-1),1)+np.diag(-1*np.ones(n-1),-1))[1:n-1];
-    x = cvx.Variable(n)
-    obj = cvx.Minimize(cvx.norm(D*x, 1));
-    constraints = [cvx.norm(y-x,2)<=sigma*np.sqrt(n)]
-    prob = cvx.Problem(obj, constraints)
-    prob.solve(solver=cvx.ECOS,verbose=False)
-    # Check for error.
-    if prob.status != cvx.OPTIMAL:
-        raise Exception("Solver did not converge!")
-        return y
-    return np.asarray(x.value).flatten()
-
-
 def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size,merge_corr_thr=0.5,merge_overlap_thr=0.8):
-
-    # ZW -- slow --
-    # f = np.ones([c.shape[0],1]);
     ############ calculate overlap area ###########
     a = csc_matrix(a);
     a_corr = triu(a.T.dot(a),k=1);
@@ -464,11 +390,8 @@ def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size
         c_pri = np.delete(c_pri, merge_idx, axis=1);
         corr_pri = np.delete(corr_img_all_r, merge_idx, axis=1);
         num_pri = np.delete(num_list,merge_idx);
-        #print("merge" + str(comps));
-        # ZW -- this can be parallelized
         for comp in comps:
             comp=list(comp);
-            print("merge" + str(num_list[comp]+1), flush=True);
             a_zero = np.zeros([a.shape[0],1]);
             a_temp = a[:,comp];
             mask_temp = np.where(a_temp.sum(axis=1,keepdims=True) > 0)[0];
@@ -566,29 +489,21 @@ def ls_solve_acc_Y(X, U, mask=None, beta_LS=None):
 def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
             maxiter=50, tol=1e-8, update_after=None,merge_corr_thr=0.5,
             merge_overlap_thr=0.7, num_plane=1, plot_en=False, max_allow_neuron_size=0.2):
-
     if U.ndim>2:
         from scipy.sparse import csr_matrix
         dims = U.shape
         T = dims[-1];
         U = U.reshape(np.prod(dims[:-1]),T,order = "F")
-
     K = c.shape[1];
     res = np.zeros(maxiter);
     uv_mean = U.mean(axis=1,keepdims=True);
-
     ## initialize spatial support ##
     mask_a = (a>0)*1;
     corr_img_all = vcorrcoef_Y(U/normalize_factor, c);
     corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
-
     f = np.ones([c.shape[0],1]);
     num_list = np.arange(K);
-
-    print('start update_AC_l2_Y....', flush=True)
-
     for iters in range(maxiter):
-        start = time.time();
         a = ls_solve_ac_Y(c, (U-b).T, mask=mask_a.T, beta_LS=a).T;
 
         temp = (a.sum(axis=0) == 0);
@@ -611,8 +526,6 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
                 c = rlt[2];
                 corr_img_all = rlt[3];
                 num_list = rlt[4];
-            else:
-                print("no merge!", flush=True);
             mask_a = (a>0)*1;
             corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
             mask_a = make_mask(corr_img_all_r, corr_th_fix, mask_a, num_plane, max_allow_neuron_size=max_allow_neuron_size);
@@ -621,18 +534,6 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
             if sum(temp):
                 a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!");
             a = a*mask_a;
-            # ZW -- this line take so long to compute, taking out at the moments
-            # res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
-            # print(res[iters])
-            # if (res[0] - res[iters])/res[0]<tol:
-            #     break
-        # if iters==0:
-        #     res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
-        #     print(res[iters])
-        print("time: " + str(time.time()-start), flush=True)
-        #if iters > 0:
-        #	if abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
-        #		break;
     temp = np.sqrt((a**2).sum(axis=0,keepdims=True));
     c = c*temp;
     a = a/temp;
@@ -675,11 +576,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
     corr_img_all = vcorrcoef_Y(U/normalize_factor, c);
     corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
     mask_ab = np.hstack((mask_a,fg));
-
-    print('start update_AC_bg_l2_Y....', flush=True)
     for iters in range(maxiter):
-        start = time.time();
-
         temp = ls_solve_ac_Y(np.hstack((c,ff)), (U-b).T, mask=mask_ab.T, beta_LS=np.hstack((a,fb))).T;
         a = temp[:,:-num_bg];
         fb = temp[:,-num_bg:];
@@ -701,7 +598,6 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
         b = np.maximum(0, uv_mean-(a*(c.mean(axis=0,keepdims=True))).sum(axis=1,keepdims=True));
 
         if update_after and ((iters+1) % update_after == 0):
-            print('merge components', flush=True)
             corr_img_all = vcorrcoef_Y(U/normalize_factor, c);
             rlt = merge_components_Y(a,c,corr_img_all, U, normalize_factor,num_list,patch_size,merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr);
             flag = isinstance(rlt, int);
@@ -710,8 +606,6 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
                 c = rlt[2];
                 corr_img_all = rlt[3];
                 num_list = rlt[4];
-            else:
-                print("no merge!", flush=True);
             mask_a = (a>0)*1;
             corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
             mask_a = make_mask(corr_img_all_r, corr_th_fix, mask_a, num_plane, max_allow_neuron_size=max_allow_neuron_size);
@@ -721,18 +615,6 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
                 a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!");
             a = a*mask_a;
             mask_ab = np.hstack((mask_a,fg));
-            # ZW -- this line take so long to compute, taking out at the moments
-            # res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
-            # print(res[iters])
-            # if (res[0] - res[iters])/res[0]<tol:
-            #     break
-        # if iters==0:
-        #     res[iters] = np.linalg.norm(U - np.matmul(a, c.T) - b, "fro")
-        #     print(res[iters])
-        print("time: " + str(time.time()-start), flush=True);
-        #if iters > 0:
-        #	if abs(res[iters] - res[iters-1])/res[iters-1] <= tol:
-        #		break;
     temp = np.sqrt((a**2).sum(axis=0,keepdims=True));
     c = c*temp;
     a = a/temp;
@@ -748,22 +630,11 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
     return a, c, b, fb, ff, res, corr_img_all_r, num_list
 
 
-# def reconstruct(Yd, spatial_components, temporal_components, background_components, fb=None, ff=None):
-#     dims = Yd.shape;
-#     print('start to reconstruct and compute movie residuals....')
-#     if fb is not None:
-#         mov_res = Yd - (np.matmul(spatial_components, temporal_components.T)+np.matmul(fb, ff.T)+background_components).reshape(dims, order='F');
-#     else:
-#         mov_res = Yd - (np.matmul(spatial_components, temporal_components.T)+background_components).reshape(dims, order='F');
-#     return mov_res
-
 def reconstruct(Yd, spatial_components, temporal_components, background_components, fb=None, ff=None):
     dims = Yd.shape;
-    print('start to reconstruct movie....', flush=True)
     ss = csr_matrix(spatial_components)
     st = csr_matrix(temporal_components)
     recon_ = ss.dot(st.T).toarray()+background_components
-    print('start to compute residuals....', flush=True)
     if fb is not None:
         recon_ = recon_ + csr_matrix(fb).dot(csr_matrix(ff).T).toarray()
     return Yd - np.asarray(recon_).reshape(dims, order='F')
@@ -777,7 +648,6 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     This function is the demixing pipeline for whole data.
     For parameters and output, please refer to demix function (demixing pipeline for low rank data).
     """
-    # ZW -- make use of the sparse matrix can save memory, but some cases, it is quite slow in compuations.....
     Yd_min = Yd.min();
     if Yd_min < 0:
         Yd_min_pw = Yd.min(axis=-1, keepdims=True);
@@ -787,7 +657,6 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     T = Yd.shape[2]
     superpixel_rlt = []
     ## cut image into small parts to find pure superpixels ##
-
     patch_height = patch_size[0];
     patch_width = patch_size[1];
     height_num = int(np.ceil(dims[0]/patch_height));
@@ -796,7 +665,6 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     patch_ref_mat = np.array(range(num_patch)).reshape(height_num, width_num, order="F");
 
     for ii in range(pass_num):
-        print("start " + str(ii+1) + " pass!", flush=True);
         if ii > 0:
             if bg:
                 Yd_res = reconstruct(Yd, a, c, b, fb, ff);
@@ -808,33 +676,20 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
                 Yt = threshold_data(Yd, th=th[ii]);
             else:
                 Yt = Yd.copy();
-        print("Get threshould data.....", flush=True)
-        start = time.time();
         if num_plane > 1:
-            print("3d data!", flush=True);
             connect_mat_1, idx, comps, permute_col = find_superpixel_3d(Yt,num_plane,cut_off_point[ii],length_cut[ii]);
         else:
-            print("find superpixels!", flush=True)
             connect_mat_1, idx, comps, permute_col = find_superpixel(Yt,cut_off_point[ii],length_cut[ii]);
-        print("time: " + str(time.time()-start));
-
         if idx==0:
             continue
-
-        start = time.time();
-        print("rank 1 svd!", flush=True)
         if ii > 0:
             c_ini, a_ini, _, _ = spatial_temporal_ini(Yt, comps, idx, length_cut[ii], bg=False);
         else:
             c_ini, a_ini, ff, fb = spatial_temporal_ini(Yt, comps, idx, length_cut[ii], bg=bg);
-        print("time: " + str(time.time()-start), flush=True);
         unique_pix = np.asarray(np.sort(np.unique(connect_mat_1)),dtype="int");
         unique_pix = unique_pix[np.nonzero(unique_pix)];
         brightness_rank_sup = order_superpixels(permute_col, unique_pix, a_ini, c_ini);
         pure_pix = [];
-
-        start = time.time();
-        print("find pure superpixels!", flush=True)
         # this `for loop` is fast enough currently
         for kk in range(num_patch):
             pos = np.where(patch_ref_mat==kk);
@@ -847,25 +702,16 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             if len(pure_pix_temp)>0:
                 pure_pix = np.hstack((pure_pix, unique_pix_temp[pure_pix_temp]));
         pure_pix = np.unique(pure_pix);
-
-        print("time: " + str(time.time()-start));
-
-        start = time.time();
-        print("prepare iteration!")
         if ii > 0:
             a_ini, c_ini, brightness_rank = prepare_iteration(Yd_res, connect_mat_1, permute_col, pure_pix, a_ini, c_ini);
             a = np.hstack((a, a_ini));
             c = np.hstack((c, c_ini));
         else:
             a, c, b, normalize_factor, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=True);
-
-        print("time: " + str(time.time()-start));
-        print("start " + str(ii+1) + " pass iteration!", flush=True)
         if ii == pass_num - 1:
             maxiter = max_iter_fin;
         else:
             maxiter=max_iter;
-        start = time.time();
         if bg:
             a, c, b, fb, ff, res, corr_img_all_r, num_list = update_AC_bg_l2_Y(Yd.reshape(np.prod(dims),-1,order="F"), normalize_factor, a, c, b, ff, fb, dims,
                                         corr_th_fix, maxiter=maxiter, tol=1e-8, update_after=update_after,
@@ -875,30 +721,12 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             a, c, b, fb, ff, res, corr_img_all_r, num_list = update_AC_l2_Y(Yd.reshape(np.prod(dims),-1,order="F"), normalize_factor, a, c, b, dims,
                                         corr_th_fix, maxiter=maxiter, tol=1e-8, update_after=update_after,
                                         merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, max_allow_neuron_size=max_allow_neuron_size);
-        print("time: " + str(time.time()-start), flush=True);
         superpixel_rlt.append({'connect_mat_1':connect_mat_1, 'pure_pix':pure_pix, 'unique_pix':unique_pix, 'brightness_rank':brightness_rank, 'brightness_rank_sup':brightness_rank_sup});
         if pass_num > 1 and ii == 0:
             rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
-            # a0 = a.copy();
-
-
-    # TF on temporal components
-    c_tf = [];
-    start = time.time();
-    if TF:
-        from ..utils.noise_estimator import noise_estimator
-        sigma = noise_estimator(c.T);
-        sigma *= fudge_factor
-        for ii in range(c.shape[1]):
-            c_tf = np.hstack((c_tf, l1_tf(c[:,ii], sigma[ii])));
-        c_tf = c_tf.reshape(T,int(c_tf.shape[0]/T),order="F");
-    print("time: " + str(time.time()-start), flush=True);
-
     fin_rlt = {'a':a, 'c':c, 'c_tf':c_tf, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
-
     if Yd_min < 0:
         Yd += Yd_min_pw;
-
     if pass_num > 1:
         return {'rlt':rlt, 'fin_rlt':fin_rlt, "superpixel_rlt":superpixel_rlt}
     else:
