@@ -3,8 +3,6 @@
 # explictly mkl support
 
 import time
-import mkl
-mkl.set_num_threads(4)
 import numpy as np
 import networkx as nx
 from ..utils.memory import get_process_memory, clear_variables
