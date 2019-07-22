@@ -505,18 +505,15 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
     num_list = np.arange(K);
     for iters in range(maxiter):
         a = ls_solve_ac_Y(c, (U-b).T, mask=mask_a.T, beta_LS=a).T;
-
         temp = (a.sum(axis=0) == 0);
         if sum(temp):
             a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero a!");
         b = np.maximum(0, uv_mean-((a*(c.mean(axis=0,keepdims=True))).sum(axis=1,keepdims=True)));
-
         c = ls_solve_ac_Y(a, U-b, mask=None, beta_LS=c).T;
         temp = (c.sum(axis=0) == 0);
         if sum(temp):
             a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero c!");
         b = np.maximum(0, uv_mean-(a*(c.mean(axis=0,keepdims=True))).sum(axis=1,keepdims=True));
-
         if update_after and ((iters+1) % update_after == 0):
             corr_img_all = vcorrcoef_Y(U/normalize_factor, c);
             rlt = merge_components_Y(a,c,corr_img_all, U, normalize_factor,num_list,patch_size,merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr);
@@ -690,7 +687,6 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         unique_pix = unique_pix[np.nonzero(unique_pix)];
         brightness_rank_sup = order_superpixels(permute_col, unique_pix, a_ini, c_ini);
         pure_pix = [];
-        # this `for loop` is fast enough currently
         for kk in range(num_patch):
             pos = np.where(patch_ref_mat==kk);
             up=pos[0][0]*patch_height;
@@ -716,17 +712,14 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             a, c, b, fb, ff, res, corr_img_all_r, num_list = update_AC_bg_l2_Y(Yd.reshape(np.prod(dims),-1,order="F"), normalize_factor, a, c, b, ff, fb, dims,
                                         corr_th_fix, maxiter=maxiter, tol=1e-8, update_after=update_after,
                                         merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, max_allow_neuron_size=max_allow_neuron_size);
-
         else:
             a, c, b, fb, ff, res, corr_img_all_r, num_list = update_AC_l2_Y(Yd.reshape(np.prod(dims),-1,order="F"), normalize_factor, a, c, b, dims,
                                         corr_th_fix, maxiter=maxiter, tol=1e-8, update_after=update_after,
                                         merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, max_allow_neuron_size=max_allow_neuron_size);
         superpixel_rlt.append({'connect_mat_1':connect_mat_1, 'pure_pix':pure_pix, 'unique_pix':unique_pix, 'brightness_rank':brightness_rank, 'brightness_rank_sup':brightness_rank_sup});
         if pass_num > 1 and ii == 0:
-            rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
-    fin_rlt = {'a':a, 'c':c, 'c_tf':c_tf, 'b':b, "fb":fb, "ff":ff, 'res':res, 'corr_img_all_r':corr_img_all_r, 'num_list':num_list};
-    if Yd_min < 0:
-        Yd += Yd_min_pw;
+            rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'num_list':num_list};
+    fin_rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'num_list':num_list};
     if pass_num > 1:
         return {'rlt':rlt, 'fin_rlt':fin_rlt, "superpixel_rlt":superpixel_rlt}
     else:
