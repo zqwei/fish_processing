@@ -1,6 +1,7 @@
 # ZW -- indicated the comments by Ziqiang Wei
 # email : weiz@janelia.hhmi.org
 import numpy as np
+import time
 import networkx as nx
 from ..utils.memory import clear_variables
 from sklearn.decomposition import NMF, TruncatedSVD
@@ -373,6 +374,7 @@ def merge_components_Y(a,c,corr_img_all_r,U,normalize_factor,num_list,patch_size
     a = csc_matrix(a);
     a_corr = triu(a.T.dot(a),k=1);
     cor = csc_matrix((corr_img_all_r>merge_corr_thr)*1);
+    # avoid zero division
     temp = cor.sum(axis=0);
     cor_corr = triu(cor.T.dot(cor),k=1);
     cri = np.asarray((cor_corr/(temp.T)) > merge_overlap_thr)*np.asarray((cor_corr/temp) > merge_overlap_thr)*((a_corr>0).toarray())
@@ -504,6 +506,8 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
     f = np.ones([c.shape[0],1]);
     num_list = np.arange(K);
     for iters in range(maxiter):
+        start = time.time();
+        print(f'Executing #{iters} iter')
         a = ls_solve_ac_Y(c, (U-b).T, mask=mask_a.T, beta_LS=a).T;
         temp = (a.sum(axis=0) == 0);
         if sum(temp):
@@ -531,6 +535,7 @@ def update_AC_l2_Y(U, normalize_factor, a, c, b, patch_size, corr_th_fix,
             if sum(temp):
                 a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!");
             a = a*mask_a;
+        print("time: " + str(time.time()-start))
     temp = np.sqrt((a**2).sum(axis=0,keepdims=True));
     c = c*temp;
     a = a/temp;
@@ -574,6 +579,8 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
     corr_img_all_r = corr_img_all.reshape(patch_size[0],patch_size[1],-1,order="F");
     mask_ab = np.hstack((mask_a,fg));
     for iters in range(maxiter):
+        start = time.time();
+        print(f'Executing #{iters} iter')
         temp = ls_solve_ac_Y(np.hstack((c,ff)), (U-b).T, mask=mask_ab.T, beta_LS=np.hstack((a,fb))).T;
         a = temp[:,:-num_bg];
         fb = temp[:,-num_bg:];
@@ -612,6 +619,7 @@ def update_AC_bg_l2_Y(U, normalize_factor, a, c, b, ff, fb, patch_size, corr_th_
                 a, c, corr_img_all_r, mask_a, num_list = delete_comp(a, c, corr_img_all_r, mask_a, num_list, temp, "zero mask!");
             a = a*mask_a;
             mask_ab = np.hstack((mask_a,fg));
+        print("time: " + str(time.time()-start))
     temp = np.sqrt((a**2).sum(axis=0,keepdims=True));
     c = c*temp;
     a = a/temp;
@@ -662,6 +670,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     patch_ref_mat = np.array(range(num_patch)).reshape(height_num, width_num, order="F");
 
     for ii in range(pass_num):
+        print(f"Execute #{ii} pass........");
         if ii > 0:
             if bg:
                 Yd_res = reconstruct(Yd, a, c, b, fb, ff);
@@ -673,20 +682,28 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
                 Yt = threshold_data(Yd, th=th[ii]);
             else:
                 Yt = Yd.copy();
+        print("Get threshould data.....")
+        start = time.time();
         if num_plane > 1:
             connect_mat_1, idx, comps, permute_col = find_superpixel_3d(Yt,num_plane,cut_off_point[ii],length_cut[ii]);
         else:
             connect_mat_1, idx, comps, permute_col = find_superpixel(Yt,cut_off_point[ii],length_cut[ii]);
+        print("time: " + str(time.time()-start));
         if idx==0:
             continue
+        start = time.time();
+        print("Initialize A and C components....")
         if ii > 0:
             c_ini, a_ini, _, _ = spatial_temporal_ini(Yt, comps, idx, length_cut[ii], bg=False);
         else:
             c_ini, a_ini, ff, fb = spatial_temporal_ini(Yt, comps, idx, length_cut[ii], bg=bg);
+        print("time: " + str(time.time()-start));
         unique_pix = np.asarray(np.sort(np.unique(connect_mat_1)),dtype="int");
         unique_pix = unique_pix[np.nonzero(unique_pix)];
         brightness_rank_sup = order_superpixels(permute_col, unique_pix, a_ini, c_ini);
         pure_pix = [];
+        start = time.time();
+        print("Find pure superpixels....")
         for kk in range(num_patch):
             pos = np.where(patch_ref_mat==kk);
             up=pos[0][0]*patch_height;
@@ -698,12 +715,16 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             if len(pure_pix_temp)>0:
                 pure_pix = np.hstack((pure_pix, unique_pix_temp[pure_pix_temp]));
         pure_pix = np.unique(pure_pix);
+        print("time: " + str(time.time()-start));
+        start = time.time();
+        print("Prepare iterations....")
         if ii > 0:
             a_ini, c_ini, brightness_rank = prepare_iteration(Yd_res, connect_mat_1, permute_col, pure_pix, a_ini, c_ini);
             a = np.hstack((a, a_ini));
             c = np.hstack((c, c_ini));
         else:
             a, c, b, normalize_factor, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=True);
+        print("time: " + str(time.time()-start));
         if ii == pass_num - 1:
             maxiter = max_iter_fin;
         else:
