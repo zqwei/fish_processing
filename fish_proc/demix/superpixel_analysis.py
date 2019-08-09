@@ -639,9 +639,14 @@ def reconstruct(Yd, spatial_components, temporal_components, background_componen
     dims = Yd.shape;
     ss = csr_matrix(spatial_components)
     st = csr_matrix(temporal_components)
-    recon_ = ss.dot(st.T).toarray()+background_components
+    print('Compute reconstruction')
+    try:
+        recon_ = ss.dot(st.T).toarray()+background_components
+    except:
+        np.savez('error', spatial_components=spatial_components, temporal_components=temporal_components, background_components=background_components)
     if fb is not None:
         recon_ = recon_ + csr_matrix(fb).dot(csr_matrix(ff).T).toarray()
+    print('Return reconstruction')
     return Yd - np.asarray(recon_).reshape(dims, order='F')
 
 
