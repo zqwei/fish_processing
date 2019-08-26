@@ -730,6 +730,8 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
         else:
             a, c, b, normalize_factor, brightness_rank = prepare_iteration(Yd, connect_mat_1, permute_col, pure_pix, a_ini, c_ini, more=True);
         print("time: " + str(time.time()-start));
+        if a.size==0:
+            continue
         if ii == pass_num - 1:
             maxiter = max_iter_fin;
         else:
@@ -744,8 +746,12 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
                                         merge_corr_thr=merge_corr_thr,merge_overlap_thr=merge_overlap_thr, num_plane=num_plane, max_allow_neuron_size=max_allow_neuron_size);
         superpixel_rlt.append({'connect_mat_1':connect_mat_1, 'pure_pix':pure_pix, 'unique_pix':unique_pix, 'brightness_rank':brightness_rank, 'brightness_rank_sup':brightness_rank_sup});
         if pass_num > 1 and ii == 0:
-            rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'num_list':num_list};
-    fin_rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff, 'num_list':num_list};
+            rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff};
+
+    if (idx==0) & (ii==0):
+        fin_rlt = {'a':np.zeros((np.prod(dims[:-1]), 1))};
+    else:
+        fin_rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff};
     if pass_num > 1:
         return {'rlt':rlt, 'fin_rlt':fin_rlt, "superpixel_rlt":superpixel_rlt}
     else:
