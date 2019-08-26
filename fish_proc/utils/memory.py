@@ -43,6 +43,15 @@ def list_create(n):
     return x
 
 @profile
+def clear_variables_text(x):
+    if isinstance(x, tuple):
+        for x_ in x:
+            del x_
+    else:
+        del x
+    gc.collect()
+    
+
 def clear_variables(x):
     if isinstance(x, tuple):
         for x_ in x:
