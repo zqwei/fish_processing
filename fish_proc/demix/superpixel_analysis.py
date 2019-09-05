@@ -749,7 +749,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
             rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff};
 
     if (idx==0) & (ii==0):
-        fin_rlt = {'a':np.zeros((np.prod(dims[:-1]), 1))};
+        fin_rlt = {'a':np.zeros((np.prod(Yd.shape[:2]), 1))};
     else:
         fin_rlt = {'a':a, 'c':c, 'b':b, "fb":fb, "ff":ff};
     if pass_num > 1:
