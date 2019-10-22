@@ -1,14 +1,12 @@
 import numpy as np
-import pandas as pd
 import os, sys, gc, shutil, time
 from glob import glob
 from h5py import File
 import warnings
 warnings.filterwarnings('ignore')
 import dask.array as da
-from utils import *
-import fish_proc.utils.dask_ as fdask
-from fish_proc.utils.getCameraInfo import getCameraInfo
+from .utils import *
+import ..utils.dask_ as fdask
 cameraNoiseMat = '/nrs/ahrens/ahrenslab/Ziqiang/gainMat/gainMat20180208'
 
 
@@ -20,6 +18,7 @@ def print_client_links(cluster):
 
 def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (4, 4), num_t_chunks = 80,\
                   dask_tmp=None, memory_limit=0, is_bz2=False, is_singlePlane=False, down_sample_registration=1):
+    from ..utils.getCameraInfo import getCameraInfo
     # set worker
     cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
     print_client_links(cluster)

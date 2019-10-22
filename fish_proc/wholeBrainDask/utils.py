@@ -1,12 +1,9 @@
 import numpy as np
-import pandas as pd
 import os, sys
-from glob import glob
-from h5py import File
-from fish_proc.utils.getCameraInfo import getCameraInfo
+
 
 def pixelDenoiseImag(img, cameraNoiseMat='', cameraInfo=None):
-    from fish_proc.pixelwiseDenoising.simpleDenioseTool import simpleDN
+    from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
     from scipy.ndimage.filters import median_filter
     win_ = 3
     pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
@@ -24,14 +21,13 @@ def pixelDenoiseImag(img, cameraNoiseMat='', cameraInfo=None):
 
 def load_bz2file(file, dims):
     import bz2
-    import numpy as np
     data = bz2.BZ2File(file,'rb').read()
     im = np.frombuffer(data,dtype='int16')
     return im.reshape(dims[-1::-1])
 
 
 def estimate_rigid2d(moving, fixed=None, affs=None, to3=True):
-    from fish_proc.imageRegistration.imTrans import ImAffine
+    from ..imageRegistration.imTrans import ImAffine
     from numpy import expand_dims
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
@@ -52,7 +48,7 @@ def rigid_interp(trans_affine, down_sample_registration, len_dat):
 
 
 def estimate_translation2d(moving, fixed=None, to3=True):
-    from fish_proc.imageRegistration.imTrans import ImAffine
+    from ..imageRegistration.imTrans import ImAffine
     from numpy import expand_dims
     trans = ImAffine()
     trans.level_iters = [1000, 1000, 100]
@@ -73,12 +69,14 @@ def apply_transform3d(mov, affs):
 
 
 def save_h5(filename, data, dtype='float32'):
+    from h5py import File
     with File(filename, 'w') as f:
         f.create_dataset('default', data=data.astype(dtype), compression='gzip', chunks=True, shuffle=True)
         f.close()
 
 
 def save_h5_rescale(filename, data, reset_max_int=65535):
+    from h5py import File
     ## np.iinfo(np.uint16).max = 65535
     with File(filename, 'w') as f:
         data_max = data.max()
@@ -125,7 +123,7 @@ def baseline_correct(block_b, block_t):
 
 
 def robust_sp_trend(mov):
-    from fish_proc.denoiseLocalPCA.detrend import trend
+    from ..denoiseLocalPCA.detrend import trend
     return trend(mov)
 
 
