@@ -6,7 +6,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import dask.array as da
 from .utils import *
-import ..utils.dask_ as fdask
+from ..utils import dask_ as fdask
 cameraNoiseMat = '/nrs/ahrens/ahrenslab/Ziqiang/gainMat/gainMat20180208'
 
 
