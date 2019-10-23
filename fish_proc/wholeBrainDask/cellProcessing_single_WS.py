@@ -108,7 +108,7 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         for nz, n_split in enumerate(splits_):
             if not os.path.exists(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz)):
                 print('Apply registration to rechunk layer %03d'%(nz))
-                trans_data_ = da.map_blocks(apply_transform3d, denoised_data[n_split], trans_affine_[n_split], chunks=(1, *denoised_data.shape[1:]), dtype='float32')
+                trans_data_ = da.map_blocks(apply_transform3d, denoised_data[n_split], trans_affine_[n_split], chunks=(1, *denoised_data.shape[1:]), dtype='float16')
                 print('Starting to rechunk layer %03d'%(nz))
                 trans_data_t_z = trans_data_.rechunk((-1, 1, chunks[1]//nsplit[0], chunks[2]//nsplit[1])).transpose((1, 2, 3, 0))
                 trans_data_t_z.to_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz))
@@ -121,7 +121,7 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
             shutil.rmtree(f'{save_root}/denoised_data.zarr')
 
 
-        trans_data_t = da.concatenate([da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz)) for nz in range(num_t_chunks)], axis=-1)
+        trans_data_t = da.concatenate([da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz), dtype='float16') for nz in range(num_t_chunks)], axis=-1)
         trans_data_t = trans_data_t.rechunk((1, chunks[1]//nsplit[0], chunks[2]//nsplit[1], -1))
         trans_data_t.to_zarr(f'{save_root}/motion_corrected_data.zarr')
         for nz in range(num_t_chunks):
@@ -138,7 +138,7 @@ def detrend_data(dir_root, save_root, window=100, percentile=20, nsplit = (4, 4)
         print_client_links(cluster)
         print('Compute detrend data ---')
         trans_data_t = da.from_zarr(f'{save_root}/motion_corrected_data.zarr')
-        Y_d = trans_data_t.map_blocks(lambda v: v - baseline(v, window=window, percentile=percentile), dtype='float32')
+        Y_d = trans_data_t.map_blocks(lambda v: v - baseline(v, window=window, percentile=percentile), dtype='float16')
         Y_d.to_zarr(f'{save_root}/detrend_data.zarr')
         del Y_d
         fdask.terminate_workers(cluster, client)
