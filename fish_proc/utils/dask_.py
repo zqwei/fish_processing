@@ -16,38 +16,6 @@ import numpy as np
 import warnings
 
 
-def get_jobqueue_cluster(walltime='12:00', cores=1, local_directory=None, memory='16GB', env_extra=None, **kwargs):
-    """
-    Instantiate a dask_jobqueue cluster using the LSF scheduler on the Janelia Research Campus compute cluster.
-    This function wraps the class dask_jobqueue.LSFCLuster and instantiates this class with some sensible defaults.
-    Extra kwargs added to this function will be passed to LSFCluster().
-    The full API for the LSFCluster object can be found here:
-    https://jobqueue.dask.org/en/latest/generated/dask_jobqueue.LSFCluster.html#dask_jobqueue.LSFCluster
-    Some of the functions requires dask-jobqueue < 0.7
-    """
-    from dask_jobqueue import LSFCluster
-    import os
-
-    if env_extra is None:
-        env_extra = [
-            "export NUM_MKL_THREADS=1",
-            "export OPENBLAS_NUM_THREADS=1",
-            "export OPENMP_NUM_THREADS=1",
-            "export OMP_NUM_THREADS=1",
-        ]
-    
-    if local_directory is None:
-        local_directory = '/scratch/' + os.environ['USER'] + '/'
-
-    cluster = LSFCluster(queue='normal',
-                         walltime=walltime,
-                         cores=cores,
-                         local_directory=local_directory,
-                         memory=memory,
-                         **kwargs)
-    return cluster
-
-
 def get_local_cluster(dask_tmp=None, memory_limit='auto'):
     from dask.distributed import LocalCluster
     if dask_tmp is None:
@@ -56,38 +24,57 @@ def get_local_cluster(dask_tmp=None, memory_limit='auto'):
         return LocalCluster(processes=False, local_dir=dask_tmp, memory_limit=memory_limit)
 
 
-def setup_drmma_cluster():
+def init_cluster(num_workers, wait_for_all_workers=True):
     """
-    Instatiate a DRMAACluster for use with the LSF scheduler on the Janelia Research Campus compute cluster. This is a
-    wrapper for dask_drmaa.DRMMACluster that uses reasonable default settings for the dask workers. Specifically, this
-    ensures that dask workers use the /scratch/$USER directory for temporary files and also that each worker runs on a
-    single core. This wrapper also directs the $WORKER.err and $WORKER.log files to /scratch/$USER.
-    """
-    from dask_drmaa import DRMAACluster
-    import os
+    Start up a dask cluster, optionally wait until all workers have been launched,
+    and then return the resulting distributed.Client object.
 
-    # we need these on each worker to prevent multithreaded numerical operations
-    pre_exec =('export NUM_MKL_THREADS=1',
-               'export OPENBLAS_NUM_THREADS=1',
-               'export OPENMP_NUM_THREADS=1')
-    local_directory = '/scratch/' + os.environ['USER']
-    output_path = ':' + local_directory
-    error_path = output_path
-    cluster_kwargs_pass = {}
-    cluster_kwargs_pass.setdefault(
-        'template',
-        {
-            'args': [
-                '--nthreads', '1',
-                '--local-directory', local_directory],
-            'jobEnvironment': os.environ,
-            'outputPath': output_path,
-            'errorPath': error_path,
-        }
-    )
-    cluster_kwargs_pass['preexec_commands'] = pre_exec
-    cluster = DRMAACluster(**cluster_kwargs_pass)
-    return cluster
+    Args:
+        num_workers:
+            How many workers to launch.
+        wait_for_all_workers:
+            If True, pause until all workers have been launched before returning.
+            Otherwise, just wait for a single worker to launch.
+
+    Returns:
+        distributed.Client
+    """
+    # Local import: LSFCluster probably isn't importable on your local machine,
+    # so it's nice to avoid importing it when you're just running local tests without a cluster.
+    from dask_jobqueue import LSFCluster
+    from distributed import Client
+    import time
+    cluster = LSFCluster(ip='0.0.0.0')
+    cluster.scale(num_workers)
+
+    required_workers = 1
+    if wait_for_all_workers:
+        required_workers = num_workers
+
+    client = Client(cluster)
+    while (wait_for_all_workers and
+           client.status == "running" and
+           len(cluster.scheduler.workers) < required_workers):
+        print(f"Waiting for {required_workers - len(cluster.scheduler.workers)} workers...")
+        time.sleep(1.0)
+
+    return cluster, client
+
+def get_jobqueue_cluster(num_workers):
+    import dask
+    import os
+    dask.config.set({'jobqueue':
+                        {'lsf':
+                          {'cores': 1,
+                           'memory': '15GB',
+                           'walltime': '01:00',
+                           'log-directory': 'dask-logs',
+                           'local-directory': f'/scratch/{os.environ["USER"]}',
+                           'use-stdin': True}
+                           }
+                           })
+
+    return init_cluster(num_workers)
 
 
 def setup_cluster_workers(numCore):
@@ -109,9 +96,7 @@ def setup_workers(numCore=120, is_local=False, dask_tmp=None, memory_limit='auto
         cluster = get_local_cluster(dask_tmp=dask_tmp, memory_limit=memory_limit)
         client = Client(cluster)
     else:
-        cluster = get_jobqueue_cluster()
-        client = Client(cluster)
-        cluster.start_workers(numCore)
+        cluster, client = get_jobqueue_cluster(numCore)
     return cluster, client
 
 
