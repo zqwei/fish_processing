@@ -30,7 +30,7 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         if not is_bz2:
             files = sorted(glob(dir_root+'/*.h5'))
             chunks = File(files[0],'r')['default'].shape
-            if not is_singlePlane: 
+            if not is_singlePlane:
                 data = da.stack([da.from_array(File(fn,'r')['default'], chunks=chunks) for fn in files])
             else:
                 if len(chunks)==2:
@@ -61,11 +61,11 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
             cameraInfo['camera_roi'] = '%d_%d_%d_%d'%(pixel_x0, pixel_x1, pixel_y0, pixel_y1)
             chunks = sample.shape
         # pixel denoise
-        if not is_singlePlane: 
+        if not is_singlePlane:
             denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo))
         else:
             denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo), new_axis=1)
-#         denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
+        denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
         num_t = denoised_data.shape[0]
     else:
         denoised_data = da.from_zarr(f'{save_root}/denoised_data.zarr')
@@ -132,6 +132,99 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
                 print('Remove temporal files of registration at %03d'%(nz))
                 shutil.rmtree(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz))
     fdask.terminate_workers(cluster, client)
+    return None
+
+
+def preprocessing_cluster(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (4, 4), num_t_chunks = 80,\
+                  dask_tmp=None, memory_limit=0, is_bz2=False, is_singlePlane=False, down_sample_registration=1):
+    from ..utils.getCameraInfo import getCameraInfo
+    # set worker
+    cluster, client = fdask.setup_workers(numCore=500, is_local=False, dask_tmp=dask_tmp, memory_limit=memory_limit)
+    print_client_links(cluster)
+
+    if not os.path.exists(f'{save_root}/denoised_data.zarr'):
+        if not is_bz2:
+            files = sorted(glob(dir_root+'/*.h5'))
+            chunks = File(files[0],'r')['default'].shape
+            if not is_singlePlane:
+                data = da.stack([da.from_array(File(fn,'r')['default'], chunks=chunks) for fn in files])
+            else:
+                if len(chunks)==2:
+                    data = da.stack([da.from_array(File(fn,'r')['default'], chunks=chunks) for fn in files])
+                else:
+                    data = da.concatenate([da.from_array(File(fn,'r')['default'], chunks=(1, chunks[1], chunks[2])) for fn in files], axis=0)
+            cameraInfo = getCameraInfo(dir_root)
+        else:
+            import dask
+            import xml.etree.ElementTree as ET
+            from utils import load_bz2file
+            dims = ET.parse(dir_root+'/ch0.xml')
+            root = dims.getroot()
+            for info in root.findall('info'):
+                if info.get('dimensions'):
+                    dims = info.get('dimensions')
+            dims = dims.split('x')
+            dims = [int(float(num)) for num in dims]
+            files = sorted(glob(dir_root+'/*.stack.bz2'))
+            imread = dask.delayed(lambda v: load_bz2file(v, dims), pure=True)
+            lazy_data = [imread(fn) for fn in files]
+            sample = lazy_data[0].compute()
+            data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
+            cameraInfo = getCameraInfo(dir_root)
+            pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
+            pixel_x0 = pixel_x0-1
+            pixel_y0 = pixel_y0-1
+            cameraInfo['camera_roi'] = '%d_%d_%d_%d'%(pixel_x0, pixel_x1, pixel_y0, pixel_y1)
+            chunks = sample.shape
+        # pixel denoise
+        if not is_singlePlane:
+            denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo))
+        else:
+            denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo), new_axis=1)
+        denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
+        num_t = denoised_data.shape[0]
+    else:
+        denoised_data = da.from_zarr(f'{save_root}/denoised_data.zarr')
+        chunks = denoised_data.shape[1:]
+        num_t = denoised_data.shape[0]
+
+    # save and compute reference image
+    print('Compute reference image ---')
+    if not os.path.exists(f'{save_root}/motion_fix_.h5'):
+        med_win = len(denoised_data)//2
+        ref_img = denoised_data[med_win-50:med_win+50].mean(axis=0).compute()
+        save_h5(f'{save_root}/motion_fix_.h5', ref_img, dtype='float16')
+
+    print('--- Done computing reference image')
+
+    # compute affine transform
+    print('Registration to reference image ---')
+    # create trans_affs file
+    if not os.path.exists(f'{save_root}/trans_affs.npy'):
+        ref_img = File(f'{save_root}/motion_fix_.h5', 'r')['default'].value
+        ref_img = ref_img.max(axis=0, keepdims=True)
+        if down_sample_registration==1:
+            trans_affine = denoised_data.map_blocks(lambda x: estimate_rigid2d(x, fixed=ref_img), dtype='float32', drop_axis=(3), chunks=(1,4,4)).compute()
+        else:
+            #### downsample trans_affine case
+            trans_affine = denoised_data[0::down_sample_registration].map_blocks(lambda x: estimate_rigid2d(x, fixed=ref_img), dtype='float32', drop_axis=(3), chunks=(1,4,4)).compute()
+            len_dat = denoised_data.shape[0]
+            trans_affine = rigid_interp(trans_affine, down_sample_registration, len_dat)
+        # save trans_affs file
+        np.save(f'{save_root}/trans_affs.npy', trans_affine)
+    # load trans_affs file
+    trans_affine_ = np.load(f'{save_root}/trans_affs.npy')
+    trans_affine_ = da.from_array(trans_affine_, chunks=(1,4,4))
+    print('--- Done registration reference image')
+
+    trans_data_ = da.map_blocks(apply_transform3d, denoised_data, trans_affine_, chunks=(1, *denoised_data.shape[1:]), dtype='float16')
+    trans_data_t = trans_data_.rechunk((-1, 1, chunks[1]//nsplit[0], chunks[2]//nsplit[1])).transpose((1, 2, 3, 0))
+    trans_data_t.to_zarr(f'{save_root}/motion_corrected_data.zarr')
+    fdask.terminate_workers(cluster, client)
+
+    print('Remove temporal files of registration')
+    if os.path.exists(f'{save_root}/denoised_data.zarr'):
+        shutil.rmtree(f'{save_root}/denoised_data.zarr')
     return None
 
 
