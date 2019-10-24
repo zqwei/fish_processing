@@ -5,6 +5,9 @@ from h5py import File
 import warnings
 warnings.filterwarnings('ignore')
 import dask.array as da
+# import zarr.storage
+# from numcodecs import Zstd, Blosc
+# zarr.storage.default_compressor = Zstd(level=1)
 from .utils import *
 from ..utils import dask_ as fdask
 cameraNoiseMat = '/nrs/ahrens/ahrenslab/Ziqiang/gainMat/gainMat20180208'
@@ -62,7 +65,7 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
             denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo))
         else:
             denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo), new_axis=1)
-        denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
+#         denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
         num_t = denoised_data.shape[0]
     else:
         denoised_data = da.from_zarr(f'{save_root}/denoised_data.zarr')
@@ -121,7 +124,7 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
             shutil.rmtree(f'{save_root}/denoised_data.zarr')
 
 
-        trans_data_t = da.concatenate([da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz), dtype='float16') for nz in range(num_t_chunks)], axis=-1)
+        trans_data_t = da.concatenate([da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz)) for nz in range(num_t_chunks)], axis=-1)
         trans_data_t = trans_data_t.rechunk((1, chunks[1]//nsplit[0], chunks[2]//nsplit[1], -1))
         trans_data_t.to_zarr(f'{save_root}/motion_corrected_data.zarr')
         for nz in range(num_t_chunks):
