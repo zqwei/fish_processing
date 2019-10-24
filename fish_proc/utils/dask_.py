@@ -16,18 +16,26 @@ import numpy as np
 import warnings
 
 
-def get_jobqueue_cluster(walltime='12:00', cores=1, local_directory=None, memory='16GB', **kwargs):
+def get_jobqueue_cluster(walltime='12:00', cores=1, local_directory=None, memory='16GB', env_extra=None, **kwargs):
     """
     Instantiate a dask_jobqueue cluster using the LSF scheduler on the Janelia Research Campus compute cluster.
     This function wraps the class dask_jobqueue.LSFCLuster and instantiates this class with some sensible defaults.
     Extra kwargs added to this function will be passed to LSFCluster().
     The full API for the LSFCluster object can be found here:
     https://jobqueue.dask.org/en/latest/generated/dask_jobqueue.LSFCluster.html#dask_jobqueue.LSFCluster
-
+    Some of the functions requires dask-jobqueue < 0.7
     """
     from dask_jobqueue import LSFCluster
     import os
 
+    if env_extra is None:
+        env_extra = [
+            "export NUM_MKL_THREADS=1",
+            "export OPENBLAS_NUM_THREADS=1",
+            "export OPENMP_NUM_THREADS=1",
+            "export OMP_NUM_THREADS=1",
+        ]
+    
     if local_directory is None:
         local_directory = '/scratch/' + os.environ['USER'] + '/'
 
@@ -95,7 +103,7 @@ def setup_local_worker():
     return Client()
 
 
-def setup_workers(numCore=70, is_local=False, dask_tmp=None, memory_limit='auto'):
+def setup_workers(numCore=120, is_local=False, dask_tmp=None, memory_limit='auto'):
     from dask.distributed import Client
     if is_local:
         cluster = get_local_cluster(dask_tmp=dask_tmp, memory_limit=memory_limit)
