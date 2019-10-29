@@ -4,10 +4,9 @@ from glob import glob
 from h5py import File
 import warnings
 warnings.filterwarnings('ignore')
+import dask
+dask.config.set({"jobqueue.lsf.use-stdin": True})
 import dask.array as da
-# import zarr.storage
-# from numcodecs import Zstd, Blosc
-# zarr.storage.default_compressor = Zstd(level=1)
 from .utils import *
 from ..utils import dask_ as fdask
 cameraNoiseMat = '/nrs/ahrens/ahrenslab/Ziqiang/gainMat/gainMat20180208'
@@ -39,7 +38,6 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
                     data = da.concatenate([da.from_array(File(fn,'r')['default'], chunks=(1, chunks[1], chunks[2])) for fn in files], axis=0)
             cameraInfo = getCameraInfo(dir_root)
         else:
-            import dask
             import xml.etree.ElementTree as ET
             from utils import load_bz2file
             dims = ET.parse(dir_root+'/ch0.xml')
@@ -139,7 +137,7 @@ def preprocessing_cluster(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, ns
                   dask_tmp=None, memory_limit=0, is_bz2=False, is_singlePlane=False, down_sample_registration=1):
     from ..utils.getCameraInfo import getCameraInfo
     # set worker
-    cluster, client = fdask.setup_workers(numCore=500, is_local=False, dask_tmp=dask_tmp, memory_limit=memory_limit)
+    cluster, client = fdask.setup_workers(numCore=200, is_local=False, dask_tmp=dask_tmp, memory_limit=memory_limit)
     print_client_links(cluster)
 
     if not os.path.exists(f'{save_root}/denoised_data.zarr'):
@@ -155,7 +153,6 @@ def preprocessing_cluster(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, ns
                     data = da.concatenate([da.from_array(File(fn,'r')['default'], chunks=(1, chunks[1], chunks[2])) for fn in files], axis=0)
             cameraInfo = getCameraInfo(dir_root)
         else:
-            import dask
             import xml.etree.ElementTree as ET
             from utils import load_bz2file
             dims = ET.parse(dir_root+'/ch0.xml')

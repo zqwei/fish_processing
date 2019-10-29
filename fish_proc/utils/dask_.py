@@ -24,57 +24,42 @@ def get_local_cluster(dask_tmp=None, memory_limit='auto'):
         return LocalCluster(processes=False, local_dir=dask_tmp, memory_limit=memory_limit)
 
 
-def init_cluster(num_workers, wait_for_all_workers=True):
+def get_jobqueue_cluster(walltime='12:00', ncpus=1, cores=1, local_directory=None, memory='16GB', env_extra=None, **kwargs):
     """
-    Start up a dask cluster, optionally wait until all workers have been launched,
-    and then return the resulting distributed.Client object.
-
-    Args:
-        num_workers:
-            How many workers to launch.
-        wait_for_all_workers:
-            If True, pause until all workers have been launched before returning.
-            Otherwise, just wait for a single worker to launch.
-
-    Returns:
-        distributed.Client
+    Instantiate a dask_jobqueue cluster using the LSF scheduler on the Janelia Research Campus compute cluster.
+    This function wraps the class dask_jobqueue.LSFCLuster and instantiates this class with some sensible defaults.
+    Extra kwargs added to this function will be passed to LSFCluster().
+    The full API for the LSFCluster object can be found here:
+    https://jobqueue.dask.org/en/latest/generated/dask_jobqueue.LSFCluster.html#dask_jobqueue.LSFCluster
+    Some of the functions requires dask-jobqueue < 0.7
     """
-    # Local import: LSFCluster probably isn't importable on your local machine,
-    # so it's nice to avoid importing it when you're just running local tests without a cluster.
-    from dask_jobqueue import LSFCluster
-    from distributed import Client
-    import time
-    cluster = LSFCluster(ip='0.0.0.0')
-    cluster.scale(num_workers)
-
-    required_workers = 1
-    if wait_for_all_workers:
-        required_workers = num_workers
-
-    client = Client(cluster)
-    while (wait_for_all_workers and
-           client.status == "running" and
-           len(cluster.scheduler.workers) < required_workers):
-        print(f"Waiting for {required_workers - len(cluster.scheduler.workers)} workers...")
-        time.sleep(1.0)
-
-    return cluster, client
-
-def get_jobqueue_cluster(num_workers):
     import dask
+    # this is necessary to ensure that workers get the job script from stdin
+    dask.config.set({"jobqueue.lsf.use-stdin": True})
+    from dask_jobqueue import LSFCluster
     import os
-    dask.config.set({'jobqueue':
-                        {'lsf':
-                          {'cores': 1,
-                           'memory': '15GB',
-                           'walltime': '01:00',
-                           'log-directory': 'dask-logs',
-                           'local-directory': f'/scratch/{os.environ["USER"]}',
-                           'use-stdin': True}
-                           }
-                           })
 
-    return init_cluster(num_workers)
+    if env_extra is None:
+        env_extra = [
+            "export NUM_MKL_THREADS=1",
+            "export OPENBLAS_NUM_THREADS=1",
+            "export OPENMP_NUM_THREADS=1",
+            "export OMP_NUM_THREADS=1",
+        ]
+
+    if local_directory is None:
+        local_directory = '/scratch/' + os.environ['USER'] + '/'
+
+    cluster = LSFCluster(queue='normal',
+                         walltime=walltime,
+                         ncpus=ncpus,
+                         cores=cores,
+                         local_directory=local_directory,
+                         memory=memory,
+                         env_extra=env_extra,
+                         job_extra=["-o /dev/null"],
+                         **kwargs)
+    return cluster
 
 
 def setup_cluster_workers(numCore):
@@ -96,7 +81,9 @@ def setup_workers(numCore=120, is_local=False, dask_tmp=None, memory_limit='auto
         cluster = get_local_cluster(dask_tmp=dask_tmp, memory_limit=memory_limit)
         client = Client(cluster)
     else:
-        cluster, client = get_jobqueue_cluster(numCore)
+        cluster = get_jobqueue_cluster()
+        client = Client(cluster)
+        cluster.start_workers(numCore)
     return cluster, client
 
 
