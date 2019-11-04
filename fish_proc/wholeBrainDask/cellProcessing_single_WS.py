@@ -244,23 +244,12 @@ def default_mask(dir_root, save_root, dask_tmp=None, memory_limit=0):
     print('Compute default mask ---')
     Y = da.from_zarr(f'{save_root}/motion_corrected_data.zarr')
     Y_d = da.from_zarr(f'{save_root}/detrend_data.zarr')
-#     Y_b = Y - Y_d
-#     Y_b_min = Y_b.min(axis=-1, keepdims=True)
-#     Y_b_min.to_zarr(f'{save_root}/Y_b_min.zarr', overwrite=True)
-#     Y_b_max = Y_b.max(axis=-1, keepdims=True)
-#     Y_b_max.to_zarr(f'{save_root}/Y_b_max.zarr', overwrite=True)
-#     Y_b_max_mask = Y_b.max(axis=-1, keepdims=True)>2
-#     Y_b_min_mask = Y_b.min(axis=-1, keepdims=True)>1
-#     mask = Y_b_max_mask & Y_b_min_mask
-#     mask.to_zarr(f'{save_root}/mask_map.zarr', overwrite=True)
     Y_d_max = Y_d.max(axis=-1, keepdims=True)
     Y_d_max.to_zarr(f'{save_root}/Y_d_max.zarr', overwrite=True)
     Y_max = Y.max(axis=-1, keepdims=True)
     Y_max.to_zarr(f'{save_root}/Y_max.zarr', overwrite=True)
-    Y_ave = Y.mean(axis=-1, keepdims=True)
+    Y_ave = Y.astype('float').mean(axis=-1, keepdims=True).astype(Y.dtype)
     Y_ave.to_zarr(f'{save_root}/Y_ave.zarr', overwrite=True)
-#     Y_std = Y.std(axis=-1, keepdims=True)
-#     Y_std.to_zarr(f'{save_root}/Y_std.zarr', overwrite=True)
     fdask.terminate_workers(cluster, client)
     return None
 
@@ -292,7 +281,7 @@ def demix_cells(save_root, dt, is_skip=True, dask_tmp=None, memory_limit=0):
     mask = da.from_zarr(f'{save_root}/Y_d_max.zarr')
     if not os.path.exists(f'{save_root}/sup_demix_rlt/'):
         os.mkdir(f'{save_root}/sup_demix_rlt/')
-    da.map_blocks(demix_blocks, Y_svd, mask, chunks=(1, 1, 1, 1), dtype='int8', save_folder=save_root, is_skip=is_skip).compute()
+    da.map_blocks(demix_blocks, Y_svd.astype('float'), mask.astype('float'), chunks=(1, 1, 1, 1), dtype='int8', save_folder=save_root, is_skip=is_skip).compute()
     fdask.terminate_workers(cluster, client)
     time.sleep(10)
     return None
@@ -427,8 +416,11 @@ def combine_dff(save_root):
                 A_tmp[:x_, :y_] = A[:, :, n_]
                 A_list.append(A_tmp)
                 dFF_list.append(dFF[n_])
-    np.savez(save_root+'cell_raw_dff', A_loc=np.array(A_loc_list), A_shape=np.array(A_shape), \
-             A=np.array(A_list), F=np.array(dFF_list))
+    np.savez(save_root+'cell_raw_dff_sparse', \
+             A_loc=np.array(A_loc_list).astype('int16'), \
+             A_shape=np.array(A_shape).astype('int16'), \
+             A=np.array(A_list).astype('float16'), \
+             F=np.array(dFF_list).astype('float16'))
     return None
 
 
@@ -464,6 +456,9 @@ def combine_dff_sparse(save_root):
                     dFF_list.append(dFF[n_])
         except:
             pass
-    np.savez(save_root+'cell_raw_dff_sparse', A_loc=np.array(A_loc_list), A_shape=np.array(A_shape), \
-             A=np.array(A_list), F=np.array(dFF_list))
+    np.savez(save_root+'cell_raw_dff_sparse', \
+             A_loc=np.array(A_loc_list).astype('int16'), \
+             A_shape=np.array(A_shape).astype('int16'), \
+             A=np.array(A_list).astype('float16'), \
+             F=np.array(dFF_list).astype('float16'))
     return None
