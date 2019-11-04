@@ -293,6 +293,7 @@ def demix_blocks(block, mask_block, save_folder='.', is_skip=True, block_id=None
 
     block_img = mask_block.squeeze()
     if block_img.max()==0:
+        dims = block.shape
         np.savez(sup_fname+'_rlt.npz', A=np.zeros([np.prod(dims[:-1]),1]))
         return np.zeros([1]*4)
     mx, my = block_img.shape
@@ -405,6 +406,7 @@ def pos_sig_correction(mov, dt, axis_=-1):
 
 
 def compute_cell_raw_dff(block_F, mask, save_root='.', ext='', block_id=None):
+    from h5py import File
     _, x_, y_, _ = block_F.shape
     A_= load_A_matrix(save_root=save_root, ext=ext, block_id=block_id, min_size=0)
 
