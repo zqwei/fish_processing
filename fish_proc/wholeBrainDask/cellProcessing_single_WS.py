@@ -65,10 +65,10 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
             denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo), new_axis=1)
         denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
         num_t = denoised_data.shape[0]
-    else:
-        denoised_data = da.from_zarr(f'{save_root}/denoised_data.zarr')
-        chunks = denoised_data.shape[1:]
-        num_t = denoised_data.shape[0]
+
+    denoised_data = da.from_zarr(f'{save_root}/denoised_data.zarr')
+    chunks = denoised_data.shape[1:]
+    num_t = denoised_data.shape[0]
 
     # save and compute reference image
     print('Compute reference image ---')
