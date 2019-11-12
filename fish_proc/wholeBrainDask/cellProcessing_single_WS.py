@@ -394,12 +394,13 @@ def combine_dff(save_root):
       3. Cell weight matrix apply to denoise and baseline
       4. dff
     '''
+    from tqdm import tqdm
     # set worker
     A_loc_list = []
     A_list = []
     dFF_list = []
     A_shape = []
-    for _ in glob(save_root+'cell_raw_dff/period_Y_demix_block_*.h5'):
+    for _ in tqdm(glob(save_root+'cell_raw_dff/period_Y_demix_block_*.h5')):
         try:
             _ = File(_)
         except:
@@ -416,7 +417,7 @@ def combine_dff(save_root):
                 A_tmp[:x_, :y_] = A[:, :, n_]
                 A_list.append(A_tmp)
                 dFF_list.append(dFF[n_])
-    np.savez(save_root+'cell_raw_dff_sparse', \
+    np.savez(save_root+'cell_raw_dff', \
              A_loc=np.array(A_loc_list).astype('int16'), \
              A_shape=np.array(A_shape).astype('int16'), \
              A=np.array(A_list).astype('float16'), \
@@ -436,7 +437,8 @@ def combine_dff_sparse(save_root):
     A_list = []
     dFF_list = []
     A_shape = []
-    for _ in glob(save_root+'cell_raw_dff/period_Y_demix_block_*.h5'):
+    from tqdm import tqdm
+    for _ in tqdm(glob(save_root+'cell_raw_dff/period_Y_demix_block_*.h5')):
         try:
             _ = File(_)
         except:
