@@ -8,5 +8,5 @@ scikit-image
 keras
 tensorflow
 deprecation
-multiprocessing
+multiprocess
 glob
