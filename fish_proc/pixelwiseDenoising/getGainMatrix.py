@@ -14,14 +14,12 @@ spark-janelia-lsf start -b
 
 """
 
-# following is run while at server
-# import pathlib as pl
-# import thunder as td
 from glob import glob
 
 
 def get_stats(base_dir):
     from fish.util.fileio import read_image
+    import thunder as td
     fnames = sorted(glob(base_dir + '/TM*'))
     ims = td.images.fromlist(fnames, accessor=read_image, engine=sc)
     ims.cache()
@@ -34,6 +32,8 @@ def get_stats(base_dir):
 
 
 def get_gain_matrix_from_sever(base_dir, out_path):
+    import pathlib as pl
+    import numpy as np
     exp_names = [pl.Path(bd).parts[-1] for bd in base_dirs]
     results = [get_stats(bd) for bd in base_dirs]
     for ind, exp in enumerate(exp_names):
