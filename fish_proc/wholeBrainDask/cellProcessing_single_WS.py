@@ -472,3 +472,24 @@ def combine_dff_sparse(save_root):
     return None
 
 
+def compute_dff_from_f(save_root, min_F=20, window=400, percentile=20, downsample=10, dFF_max=5, dask_tmp=None, memory_limit=0):
+    cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
+    print_client_links(cluster)
+    
+    _ = np.load(save_root+'cell_raw_dff_sparse.npz', allow_pickle=True)
+    A = _['A'].astype('float')
+    F_ = _['F'].astype('float')
+    A_loc = _['A_loc']
+    _ = None
+    valid_cell = F_.max(axis=-1)>min_F
+    A = A[valid_cell]
+    A_loc = A_loc[valid_cell]
+    F_ = F_[valid_cell]
+    F_dask = da.from_array(F_, chunks=('auto', -1))
+    baseline_ = da.map_blocks(fwc.baseline, F_dask, dtype='float', window=window, percentile=percentile, downsample=downsample).compute()
+    dFF = F_/baseline_-1
+    invalid_ = (dFF.max(axis=-1)>dFF_max) | (np.isnan(dFF.max(axis=-1))) | (baseline_.min(axis=-1)<=0)
+    np.savez(save_root+'cell_dff.npz', A=A[~invalid_].astype('float16'), A_loc=A_loc[~invalid_], dFF=dFF[~invalid_].astype('float16'))
+    
+    fdask.terminate_workers(cluster, client)
+    return None
