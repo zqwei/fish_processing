@@ -21,9 +21,11 @@ def get_local_cluster(dask_tmp=None, memory_limit='auto'):
     from multiprocessing import cpu_count
     n_workers = cpu_count()
     if dask_tmp is None:
-        return LocalCluster(n_workers=n_workers, processes=False, threads_per_worker=1, memory_limit=memory_limit)
+        # return LocalCluster(n_workers=n_workers, processes=False, threads_per_worker=1, memory_limit=memory_limit)
+        return LocalCluster(processes=False, memory_limit=memory_limit)
     else:
-        return LocalCluster(n_workers=n_workers, processes=False, threads_per_worker=1, local_dir=dask_tmp, memory_limit=memory_limit)
+        # return LocalCluster(n_workers=n_workers, processes=False, threads_per_worker=1, local_dir=dask_tmp, memory_limit=memory_limit)
+        return LocalCluster(processes=False, local_dir=dask_tmp, memory_limit=memory_limit)
 
 
 def get_jobqueue_cluster(walltime='12:00', ncpus=1, cores=1, local_directory=None, memory='16GB', env_extra=None, **kwargs):
