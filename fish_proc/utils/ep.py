@@ -231,7 +231,7 @@ def create_trial_inds(rawdata):
 
     import numpy as np
     import matplotlib.pyplot as plt
-
+    stimParam3_max = rawdata['stimParam3'].max()
     stimParam = rawdata['stimParam3'] + stimParam3_max*rawdata['stimParam4']
     stimParam_max = stimParam.max();
     stimParam_change = np.where(np.diff(stimParam)==(-(stimParam_max-1)))[0]+1
