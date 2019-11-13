@@ -209,20 +209,20 @@ def cropimage(ims,R,startx,starty):
 #    scmosimg = poissonimg*gainmap + np.sqrt(varmap)*np.random.randn(R,R)
 #    scmosimg += offset
 #    return scmosimg,poissonimg
-
-def gendatastack(normimg,varmap,gainmap,I,bg,offset,N):
-    R = normimg.shape[0]
-    ims = np.zeros([N,R,R])
-    imsp = np.zeros([N,R,R])
-    imsd = np.zeros([N,R,R])
-    for ii in range(N):
-        noiseimg = addnoise(varmap,gainmap,normimg,I,bg,offset)
-        ims[ii] = noiseimg[0]
-        imsp[ii] = noiseimg[1]
-        imsd[ii] = (noiseimg[0]-offset)/gainmap
-    imso = normimg*I+bg
-    imsd[imsd<=0] = 1e-6
-    return ims,imsd,imsp,imso
+#
+# def gendatastack(normimg,varmap,gainmap,I,bg,offset,N):
+#     R = normimg.shape[0]
+#     ims = np.zeros([N,R,R])
+#     imsp = np.zeros([N,R,R])
+#     imsd = np.zeros([N,R,R])
+#     for ii in range(N):
+#         noiseimg = addnoise(varmap,gainmap,normimg,I,bg,offset)
+#         ims[ii] = noiseimg[0]
+#         imsp[ii] = noiseimg[1]
+#         imsd[ii] = (noiseimg[0]-offset)/gainmap
+#     imso = normimg*I+bg
+#     imsd[imsd<=0] = 1e-6
+#     return ims,imsd,imsp,imso
 
 class filters(object):
 
