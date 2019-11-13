@@ -674,6 +674,7 @@ def demix_whole_data(Yd, cut_off_point=[0.95,0.9], length_cut=[15,10], th=[2,1],
     num_patch = height_num*width_num;
     patch_ref_mat = np.array(range(num_patch)).reshape(height_num, width_num, order="F");
 
+    a, c, b, fb, ff = (None, None, None, None, None)
     for ii in range(pass_num):
         print(f"Execute #{ii} pass........");
         if ii > 0:
