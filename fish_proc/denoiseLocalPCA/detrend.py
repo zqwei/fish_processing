@@ -1,6 +1,7 @@
 from .preprocess import _get_spline_trend
 import numpy as np
 from scipy.signal import butter, lfilter
+from scipy.ndimage import filters
 
 def detrend(mov,
             stim=None,
@@ -38,7 +39,7 @@ def detrend(mov,
         disc_idx[1:] = disc_idx[1:] - np.cumsum(np.ones(len(disc_idx) - 1) * 3)
         disc_idx = disc_idx - 1
         disc_idx = np.append(disc_idx,
-                             np.argwhere(filt.convolve1d(stim > 0,
+                             np.argwhere(filters.convolve1d(stim > 0,
                                                          np.array([1, -1]))))
     return mov_detr, trend, stim, np.unique(disc_idx)
 
@@ -52,7 +53,7 @@ def trend(mov, order=3, followup=100, spacing=2000, q=.05, axis=-1, robust=True)
 
 def trend_sg(mov, win_=201, order=7):
     from scipy.signal import savgol_filter
-    trend = savgol_filter(Y, win_, order, axis=-1)
+    trend = savgol_filter(mov, win_, order, axis=-1)
     return trend
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
