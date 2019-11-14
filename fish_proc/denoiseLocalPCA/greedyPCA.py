@@ -522,7 +522,6 @@ def greedy_spatial_denoiser(Y,
     """
     if U_update:
         outs_2 = [c_l1_u_hat(y, V_TF,fudge_factor) for y in Y]
-        #outs_2 = update_U_parallel(Y,V_TF,fudge_factor)
         U_hat, nus_ = map(np.asarray,zip(*np.asarray(outs_2)))
     else:
         nus_= np.zeros((V_TF.shape[0])).astype('float32')
@@ -1054,6 +1053,7 @@ def denoise_components(data_all,
 
     # temporally filter the data
     if tfilt:
+        import cnmf
         print('Apply exponential filter') if verbose else 0
         data0 = np.zeros(data.shape)
         #T, num_pxls = data.shape
@@ -1062,7 +1062,8 @@ def denoise_components(data_all,
             tau = cnmf.deconvolution.estimate_time_constant(
                     trace,p=p,sn=None,lags=5,fudge_factor=1.)
             window = tau **range(0,100)
-            data0[:,ii] = np.convolve(fluor,window,mode='full')[:T]/np.sum(window)
+            T=len(trace)
+            data0[:,ii] = np.convolve(trace,window,mode='full')[:T]/np.sum(window)
     else:
         data0 = data.copy()
 
@@ -1333,24 +1334,3 @@ def c_update_U(y,
     return np.asarray(u_hat.value).flatten()
 
 
-#### DEPRECATED parallel implementation
-
-def update_u_parallel(Y,V_TF,fudge_factor):
-    pool = multiprocessing.Pool(processes=20)
-    c_outs = pool.starmap(c_l1_u_hat, itertools.product(y, V_TF, fudge_factor))
-    pool.close()
-    pool.join()
-    return c_outs
-
-
-def c_update_U_parallel(Y,V_TF,nus_):
-    """
-    call c_update_U as queue
-    """
-    pool = multiprocessing.Pool()#processes=20)
-    args = [(y,V_TF,nus_[idx]) for idx, y in enumerate(Y)]
-    c_outs = pool.starmap(c_update_U, args)
-
-    pool.close()
-    pool.join()
-    return c_outs
