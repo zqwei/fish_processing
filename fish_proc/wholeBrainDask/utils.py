@@ -156,6 +156,7 @@ def intesity_mask_block(blocks, percentile):
 
 
 def snr_mask(Y_svd, std_per=20, snr_per=10):
+    from ..utils.noise_estimator import get_noise_fft
     Y_svd = Y_svd.squeeze()
     d1, d2, _ = Y_svd.shape
     mean_ = Y_svd.mean(axis=-1,keepdims=True)
