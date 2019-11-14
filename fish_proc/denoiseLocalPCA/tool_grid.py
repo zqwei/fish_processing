@@ -559,8 +559,8 @@ def combine_blocks(dimsM, Mc, dimsMc=None,
     for ii, Mn in enumerate(Mc):
         # shape of current block
         d1c, d2c = dimsMc[ii][:2]
-        if (np.isnan(Mn).any()):
-            Mn = unpad(Mn)
+#         if (np.isnan(Mn).any()):
+#             Mn = unpad(Mn)
         if Mn.ndim < 3 and ndims ==3:
             Mn = Mn.reshape((d1c, d2c)+(T,), order=array_order)
         if ndims ==3:
@@ -578,3 +578,4 @@ def combine_blocks(dimsM, Mc, dimsMc=None,
                 i += d1c
                 j = 0
     return Mall
+
