@@ -3,7 +3,7 @@ import scipy as sp
 import scipy.signal as sps
 import scipy.ndimage as ndi
 import scipy.sparse as spr
-
+from scipy.signal import butter, lfilter
 
 def reshape_dims(M,dims=None):
 
