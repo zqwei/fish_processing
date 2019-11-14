@@ -179,103 +179,6 @@ def mask_blocks(block, mask=None):
     return _
 
 
-def demix_blocks_square(block, mask_block, save_folder='.', is_skip=True, block_id=None):
-    from skimage.exposure import equalize_adapthist as clahe
-    from skimage.morphology import square, dilation
-    from skimage.segmentation import watershed, felzenszwalb
-    from sklearn.decomposition import NMF
-    from skimage.filters import gaussian as f_gaussian
-    from scipy.sparse import csr_matrix
-    from skimage.measure import label as m_label
-
-    # set fname for blocks
-    fname = 'period_Y_demix_block_'
-    for _ in block_id:
-        fname += '_'+str(_)
-    # set no processing conditions
-    sup_fname = f'{save_folder}/sup_demix_rlt/'+fname
-
-    block_img = mask_block.squeeze()
-    if block_img.max()==0:
-        np.savez(sup_fname+'_rlt.npz', A=np.zeros([np.prod(dims[:-1]),1]))
-        return np.zeros([1]*4)
-    mx, my = block_img.shape
-    n_split = 4
-    x_vec = np.array_split(np.arange(mx), n_split)
-    y_vec = np.array_split(np.arange(my), n_split)
-    block_list = []
-    s = np.zeros((mx, my))
-    for ny in y_vec:
-        for nx in x_vec:
-            s_ = s.copy()
-            s_[nx.min():nx.max()+3,ny.min():ny.max()+3]=1
-            block_list.append(s_.reshape(-1, order='F'))
-    a_ini = np.array(block_list).astype('bool').T
-
-    Yt = block.squeeze()
-    dims = Yt.shape;
-    T = dims[-1];
-    Yt_r = Yt.reshape(np.prod(dims[:-1]),T,order = "F");
-    Yt_r[Yt_r<0]=0
-    Yt_r = csr_matrix(Yt_r);
-    model = NMF(n_components=1, init='custom')
-    U_mat = []
-    V_mat = []
-    if Yt_r.sum()==0:
-        np.savez(sup_fname+'_rlt.npz', A=np.zeros([np.prod(dims[:-1]),1]))
-        return np.zeros([1]*4)
-    for ii, comp in enumerate(a_ini.T):
-        y_temp = Yt_r[comp,:].astype('float')
-        if y_temp.sum()==0:
-            continue
-        u_ = np.zeros((np.prod(dims[:-1]),1)).astype('float32')
-        u_[list(comp)] = model.fit_transform(y_temp, W=np.array(y_temp.mean(axis=1)),H = np.array(y_temp.mean(axis=0)))
-        U_mat.append(u_)
-        V_mat.append(model.components_.T)
-    if len(U_mat)>1:
-        U_mat = np.concatenate(U_mat, axis=1)
-        V_mat = np.concatenate(V_mat, axis=1)
-    else:
-        U_mat = np.zeros([np.prod(dims[:-1]),1])
-        V_mat = np.zeros([T,1])
-
-    if U_mat.sum()>0:
-        model_ = NMF(n_components=U_mat.shape[-1], init='custom', solver='cd', max_iter=20)
-        U = model_.fit_transform(Yt_r.astype('float'), W=U_mat.astype('float64'), H=V_mat.T.astype('float64'))
-        V = model_.components_
-    else:
-        U = np.zeros([np.prod(dims[:-1]),1])
-    # clean up the NMF results
-    U[U<U.max(axis=-1, keepdims=True)*.3]=0
-    # split components
-    U_ext = []
-    V_ext = []
-    for n_u in range(U.shape[1]):
-        u_ = U[:, n_u].reshape(mx, my, order='F')
-        u_blur = f_gaussian(u_, sigma=1/12)
-        blobs_labels = m_label(u_blur>u_blur.max()*0.3, background=0)
-        n_max = blobs_labels.max()
-        for n_b in range(1, n_max+1):
-            if(blobs_labels==n_b).sum()>10:
-                u_b = u_.copy()
-                u_b[blobs_labels!=n_b] = 0
-                U_ext.append(u_b.reshape(-1, order='F'))
-                V_ext.append(V[n_u])
-    if len(U_ext)==0:
-        np.savez(sup_fname+'_rlt.npz', A=np.zeros([np.prod(dims[:-1]),1]))
-        return np.zeros([1]*4)
-
-    U_ext = np.array(U_ext, order='F').T
-    V_ext = np.array(V_ext, order='F').T
-    model_ = NMF(n_components=U_ext.shape[-1], init='custom', solver='mu', max_iter=10)
-    U = model_.fit_transform(Yt_r.astype('float'), W=U_ext.astype('float64'), H=V_ext.T.astype('float64'))
-    U[U<U.max(axis=-1, keepdims=True)*.3]=0
-    temp = np.sqrt((U**2).sum(axis=0,keepdims=True))
-    U = U/temp
-    np.savez(sup_fname+'_rlt.npz', A=U)
-    return np.zeros([1]*4)
-
-
 def demix_blocks(block, mask_block, save_folder='.', is_skip=True, block_id=None):
     from skimage.exposure import equalize_adapthist as clahe
     from skimage.morphology import square, dilation
@@ -298,13 +201,8 @@ def demix_blocks(block, mask_block, save_folder='.', is_skip=True, block_id=None
         np.savez(sup_fname+'_rlt.npz', A=np.zeros([np.prod(dims[:-1]),1]))
         return np.zeros([1]*4)
     mx, my = block_img.shape
-#     try:
-#         img_adapteq = clahe(block_img/block_img.max(), clip_limit=0.03)
-#     except:
-#         img_adapteq = block_img
     img_adapteq = block_img/block_img.max()
     # initial segments
-    # segments_watershed = watershed(img_adapteq, markers=20, compactness=0.01)
     segments_watershed = felzenszwalb(img_adapteq, scale=10, sigma=0.01, min_size=50)
     min_ = segments_watershed.min()
     max_ = segments_watershed.max()
