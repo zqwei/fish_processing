@@ -111,6 +111,7 @@ def compute_dff(sig):
     return (sig.mean(axis=1)-sig.mean(axis=1).mean())/(sig.mean(axis=1).mean()-bg)
 
 if __name__ == '__main__':
+    import os
     folderName = '/groups/ahrens/ahrenslab/Takashi/toZiqiang/02212018Fish2-1/'
     imgFileName = 'Raw_stack.tif'
     fishName = '02212018Fish2-1_Raw_stack'
