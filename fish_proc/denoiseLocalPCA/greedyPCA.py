@@ -719,6 +719,7 @@ def greedy_component_denoiser(Y,
                               constraint_segmented=False, # call trefide
                               ignore_frames=None,
                               stim_knots=None,
+                              plot_en=False,
                               stim_delta=10):
     """
     Denoise spatial and temporal components greedily
