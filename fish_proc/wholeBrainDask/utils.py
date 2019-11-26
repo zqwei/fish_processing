@@ -297,7 +297,7 @@ def sup_file_name_block(save_root='.', ext='', block_id=None):
 def load_A_matrix(save_root='.', ext='', block_id=None, min_size=40):
     fname = sup_file_name_block(save_root=save_root, ext=ext, block_id=block_id)
     _ = np.load(fname, allow_pickle=True)
-    return _['A']
+    return _['A'].astype('float')
 
 
 def pos_sig_correction(mov, dt, axis_=-1):

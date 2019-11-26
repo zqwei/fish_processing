@@ -388,7 +388,7 @@ def compute_cell_dff_raw(save_root, mask, dask_tmp=None, memory_limit=0):
     trans_data_t = da.from_zarr(f'{save_root}/motion_corrected_data.zarr')
     if not os.path.exists(f'{save_root}/cell_raw_dff'):
         os.makedirs(f'{save_root}/cell_raw_dff')
-    da.map_blocks(compute_cell_raw_dff, trans_data_t, mask, dtype='float32', chunks=(1, 1, 1, 1), save_root=save_root, ext='').compute()
+    da.map_blocks(compute_cell_raw_dff, trans_data_t.astype('float'), mask, dtype='float32', chunks=(1, 1, 1, 1), save_root=save_root, ext='').compute()
     fdask.terminate_workers(cluster, client)
     return None
 
