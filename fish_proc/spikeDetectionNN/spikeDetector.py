@@ -8,12 +8,12 @@ https://gist.github.com/philipperemy/b8a7b7be344e447e7ee6625fe2fdd765
 '''
 import numpy as np
 import deprecation
-from keras.layers import RepeatVector, Bidirectional, TimeDistributed
-from keras.layers.core import Dropout, Dense
-from keras.layers.recurrent import LSTM
-from keras.models import Sequential
-from keras.models import load_model
-from keras.utils import plot_model
+from tensorflow.keras.layers import RepeatVector, Bidirectional, TimeDistributed
+from tensorflow.keras.layers import Dropout, Dense
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import plot_model
 # import keras
 # print(keras.__version__)
 
