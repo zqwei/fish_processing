@@ -21,11 +21,22 @@ def print_client_links(cluster):
 def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (4, 4), num_t_chunks = 80,\
                   dask_tmp=None, memory_limit=0, is_bz2=False, is_singlePlane=False, down_sample_registration=1):
     from ..utils.getCameraInfo import getCameraInfo
+    from tqdm import tqdm
     # set worker
     cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
     print_client_links(cluster)
+    
+    if isinstance(save_root, list):
+        save_root_ext = save_root[1]
+        save_root = save_root[0]
+    
+    print(f'Tmp files will be saved to {save_root}')
+    if 'save_root_ext' in locals():
+        print(f'With extended drive to {save_root_ext}')
 
     if not os.path.exists(f'{save_root}/denoised_data.zarr'):
+        print('========================')
+        print('Getting data infos')
         if not is_bz2:
             files = sorted(glob(dir_root+'/*.h5'))
             chunks = File(files[0],'r')['default'].shape
@@ -59,13 +70,17 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
             cameraInfo['camera_roi'] = '%d_%d_%d_%d'%(pixel_x0, pixel_x1, pixel_y0, pixel_y1)
             chunks = sample.shape
         # pixel denoise
+        print('========================')
+        print('Denoising camera noise')
         if not is_singlePlane:
             denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo))
         else:
             denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo), new_axis=1)
+        print('Denoising camera noise -- save data')
         denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
         num_t = denoised_data.shape[0]
-
+        
+    print('Denoising camera noise -- load saved data')
     denoised_data = da.from_zarr(f'{save_root}/denoised_data.zarr')
     chunks = denoised_data.shape[1:]
     num_t = denoised_data.shape[0]
@@ -106,13 +121,32 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         # swap axes
         splits_ = np.array_split(np.arange(num_t).astype('int'), num_t_chunks)
         print(f'Processing total {num_t_chunks} chunks in time.......')
+        # estimate size of data to store
+        used_ = du(f'{save_root}/denoised_data.zarr/')
+        est_data_size = int(used_.decode('utf-8'))//(2**20*num_t_chunks*2)+5 #kb to Gb
         for nz, n_split in enumerate(splits_):
             if not os.path.exists(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz)):
+                if 'save_root_ext' in locals():
+                    if os.path.exists(save_root_ext+'/motion_corrected_data_chunks_%03d.zarr'%(nz)):
+                        continue
                 print('Apply registration to rechunk layer %03d'%(nz))
                 trans_data_ = da.map_blocks(apply_transform3d, denoised_data[n_split], trans_affine_[n_split], chunks=(1, *denoised_data.shape[1:]), dtype='float16')
                 print('Starting to rechunk layer %03d'%(nz))
                 trans_data_t_z = trans_data_.rechunk((-1, 1, chunks[1]//nsplit[0], chunks[2]//nsplit[1])).transpose((1, 2, 3, 0))
-                trans_data_t_z.to_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz))
+                # check space availablity
+                _, _, free_ = shutil.disk_usage(f'{save_root}/')
+                if (free_//(2**30)) > est_data_size:
+                    print(f'Remaining space {free_//(2**30)} GB..... -- start to save at {save_root}')
+                    trans_data_t_z.to_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz))
+                else:
+                    try:
+                        print(f'Remaining space {free_//(2**30)} GB..... -- start to save at {save_root_ext}')
+                        trans_data_t_z.to_zarr(save_root_ext+'/motion_corrected_data_chunks_%03d.zarr'%(nz))
+                    except Exception as e:
+                        # if any error -- break the code
+                        print(e)    
+                        fdask.terminate_workers(cluster, client)
+                        return None
                 del trans_data_t_z
                 gc.collect()
                 print('finishing rechunking time chunk -- %03d of %03d'%(nz, num_t_chunks))
@@ -120,6 +154,9 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         print('Remove temporal files of registration')
         if os.path.exists(f'{save_root}/denoised_data.zarr'):
             shutil.rmtree(f'{save_root}/denoised_data.zarr')
+        for ext_files in tqdm(glob(save_root_ext+'/motion_corrected_data_chunks_*.zarr')):
+            print(f'Moving file {ext_files} to Tmp-file folder.....')
+            shutil.move(ext_files, save_root+'/')
     fdask.terminate_workers(cluster, client)
     return None
 
@@ -131,10 +168,19 @@ def combine_preprocessing(dir_root, save_root, num_t_chunks = 80, dask_tmp=None,
     trans_data_t = da.concatenate([da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz)) for nz in range(num_t_chunks)], axis=-1)
     trans_data_t = trans_data_t.rechunk((1, chunks[1], chunks[2], -1))
     trans_data_t.to_zarr(f'{save_root}/motion_corrected_data.zarr')
-    for nz in range(num_t_chunks):
+    
+    def rm_tmp(nz, save_root=save_root):
         if os.path.exists(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz)):
             print('Remove temporal files of registration at %03d'%(nz))
             shutil.rmtree(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz))
+        return np.array([1])
+    
+    #     for nz in range(num_t_chunks):
+    #         if os.path.exists(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz)):
+    #             print('Remove temporal files of registration at %03d'%(nz))
+    #             shutil.rmtree(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz))
+    nz_list = da.from_array(np.arange(num_t_chunks), chunks=(1)) 
+    da.map_blocks(rm_tmp, nz_list).compute()
     fdask.terminate_workers(cluster, client)
     return None
 
