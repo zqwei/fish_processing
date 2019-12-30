@@ -9,3 +9,8 @@ def du(path):
     import subprocess
     # return subprocess.check_output(['du','-sh', path]).split()[0]
     return subprocess.check_output(['du', path]).split()[0]
+
+
+def chmod(path, mode='0775'):
+    import subprocess
+    subprocess.call(['chmod', '-R', mode, path])
