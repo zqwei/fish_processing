@@ -3,6 +3,7 @@ This is the data processing used for the calcium and voltage imaging
 
 ## Example -- whole-brain cell segmenation and zoom-in
 ![Whole brain cell segmenation](docs/example_cell_segments.gif)
+![Zoom-in](docs/example_cell_segments_small.gif)
 
 ## Environment setup
 The dependent python packages are listed in `requirements.txt`, which should be all included in a major anaconda package.
