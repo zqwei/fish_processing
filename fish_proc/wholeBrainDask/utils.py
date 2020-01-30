@@ -194,6 +194,9 @@ def demix_blocks(block, mask_block, save_folder='.', is_skip=True, block_id=None
         fname += '_'+str(_)
     # set no processing conditions
     sup_fname = f'{save_folder}/sup_demix_rlt/'+fname
+    
+    if os.path.exists(sup_fname+'_rlt.npz'):
+        return np.zeros([1]*4)
 
     block_img = mask_block.squeeze()
     if block_img.max()==0:
