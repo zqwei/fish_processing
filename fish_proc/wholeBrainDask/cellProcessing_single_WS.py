@@ -44,6 +44,9 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
             files = sorted(glob(dir_root+'/*.h5'))
             chunks = File(files[0],'r')['default'].shape
             print('Stacking data')
+            ### dask.from_array is extremely slow while processing many files
+            ### this is replaced by dask.from_delayed
+            '''
             if not is_singlePlane:
                 data = da.stack([da.from_array(File(fn,'r')['default'], chunks=chunks) for fn in files])
             else:
@@ -51,6 +54,19 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
                     data = da.stack([da.from_array(File(fn,'r')['default'], chunks=chunks) for fn in files])
                 else:
                     data = da.concatenate([da.from_array(File(fn,'r')['default'], chunks=(1, chunks[1], chunks[2])) for fn in files], axis=0)
+            '''
+            imread = dask.delayed(lambda v: File(v,'r')['default'].value)
+            lazy_data = [imread(fn) for fn in files]
+            sample = lazy_data[0].compute()
+            if not is_singlePlane:
+                data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
+            else:
+                if len(chunks)==2:
+                    data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
+                else:
+                    data = da.concatenate([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data], axis=0).rechunk((1,-1,-1))
+            
+            
             cameraInfo = getCameraInfo(dir_root)
         else:
             import xml.etree.ElementTree as ET
