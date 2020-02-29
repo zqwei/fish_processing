@@ -34,6 +34,8 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
     print(f'Tmp files will be saved to {save_root}')
     if 'save_root_ext' in locals():
         print(f'With extended drive to {save_root_ext}')
+    print(f'is_singlePlane: {is_singlePlane}')
+    print(f'nsplit: {nsplit}')
 
     if not os.path.exists(f'{save_root}/denoised_data.zarr'):
         print('========================')
@@ -41,6 +43,7 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         if not is_bz2:
             files = sorted(glob(dir_root+'/*.h5'))
             chunks = File(files[0],'r')['default'].shape
+            print('Stacking data')
             if not is_singlePlane:
                 data = da.stack([da.from_array(File(fn,'r')['default'], chunks=chunks) for fn in files])
             else:
@@ -112,7 +115,7 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         np.save(f'{save_root}/trans_affs.npy', trans_affine)
     # load trans_affs file
     trans_affine_ = np.load(f'{save_root}/trans_affs.npy')
-    trans_affine_ = da.from_array(trans_affine_, chunks=(1,4,4))
+    trans_affine_ = da.from_array(np.expand_dims(trans_affine_, 3), chunks=(1,4,4,1))
     print('--- Done registration reference image')
 
     # apply affine transform

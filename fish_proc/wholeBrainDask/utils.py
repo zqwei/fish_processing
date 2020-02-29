@@ -65,7 +65,7 @@ def estimate_translation2d(moving, fixed=None, to3=True):
 
 def apply_transform3d(mov, affs):
     from scipy.ndimage.interpolation import affine_transform
-    return np.expand_dims(affine_transform(mov.squeeze(axis=0), affs.squeeze(axis=0)), 0)
+    return np.expand_dims(affine_transform(mov.squeeze(axis=0), affs.squeeze(axis=(0, 3))), 0)
 
 
 def save_h5(filename, data, dtype='float32'):
