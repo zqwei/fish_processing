@@ -1,34 +1,6 @@
 import numpy as np
 import scipy as sp
 import scipy.signal
-import cv2
-
-
-def resize(Y, size, interpolation=cv2.INTER_AREA):
-    """
-    :param Y:
-    :param size:
-    :param interpolation:
-    :return:
-    faster and 3D compatible version of skimage.transform.resize
-    """
-    if Y.ndim == 2:
-        return cv2.resize(Y, tuple(size[::-1]), interpolation=interpolation)
-
-    elif Y.ndim == 3:
-        if np.isfortran(Y):
-            return (cv2.resize(np.array(
-                [cv2.resize(y, size[:2], interpolation=interpolation) for y in Y.T]).T
-                .reshape((-1, Y.shape[-1]), order='F'),
-                (size[-1], np.prod(size[:2])), interpolation=interpolation).reshape(size, order='F'))
-        else:
-            return np.array([cv2.resize(y, size[:0:-1], interpolation=interpolation) for y in
-                    cv2.resize(Y.reshape((len(Y), -1), order='F'),
-                        (np.prod(Y.shape[1:]), size[0]), interpolation=interpolation)
-                    .reshape((size[0],) + Y.shape[1:], order='F')])
-    else:  # TODO deal with ndim=4
-        raise NotImplementedError
-    return
 
 def noise_estimator(Y,range_ff=[0.25,0.5],method='logmexp'):
     dims = Y.shape
@@ -235,8 +207,7 @@ def estimate_noise(signals,
     return np.sqrt([summarizer(estimator(signal)) for signal in signals])
 
 
-def get_noise_fft(Y, noise_range=[0.25, 0.5], noise_method='logmexp', max_num_samples_fft=3072,
-                  opencv=True):
+def get_noise_fft(Y, noise_range=[0.25, 0.5], noise_method='logmexp', max_num_samples_fft=3072):
     """Estimate the noise level for each pixel by averaging the power spectral density.
 
     Inputs:
@@ -281,18 +252,9 @@ def get_noise_fft(Y, noise_range=[0.25, 0.5], noise_method='logmexp', max_num_sa
     ind = np.logical_and(ind1, ind2)
     # we compute the mean of the noise spectral density s
     if Y.ndim > 1:
-        if opencv:
-            import cv2
-            psdx = []
-            for y in Y.reshape(-1, T):
-                dft = cv2.dft(y, flags=cv2.DFT_COMPLEX_OUTPUT).squeeze()[
-                    :len(ind)][ind]
-                psdx.append(np.sum(1. / T * dft * dft, 1))
-            psdx = np.reshape(psdx, Y.shape[:-1] + (-1,))
-        else:
-            xdft = np.fft.rfft(Y, axis=-1)
-            xdft = xdft[..., ind[:xdft.shape[-1]]]
-            psdx = 1. / T * abs(xdft)**2
+        xdft = np.fft.rfft(Y, axis=-1)
+        xdft = xdft[..., ind[:xdft.shape[-1]]]
+        psdx = 1. / T * abs(xdft)**2
         psdx *= 2
         sn = mean_psd(psdx, method=noise_method)
 

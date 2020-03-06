@@ -31,7 +31,7 @@ def noise_level(mov_wf, range_ff =[0.25,0.5]):
     return noise_level,
 
 
-def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, opencv=True, is_mp=True):
+def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, is_mp=True):
     from .np_mp import parallel_to_chunks
     from scipy.ndimage.filters import convolve
     if swap_dim:
@@ -61,31 +61,20 @@ def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, opencv=True,
             sz = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype='float32')
 
     if is_mp:
-        sum_, = parallel_to_chunks(local_correlations_fft_slice_sum, Y, sz=sz, opencv=opencv, ndim=Y.ndim)
+        sum_, = parallel_to_chunks(local_correlations_fft_slice_sum, Y, sz=sz, ndim=Y.ndim)
         MASK = convolve(np.ones(Y.shape[1:], dtype='float32'), sz, mode='constant')
         return sum_.sum(axis=0)/MASK/len_
     else:
-        import cv2
         from scipy.ndimage.filters import convolve
-        if opencv and Y.ndim == 3:
-            Yconv = Y.copy()
-            for idx, img in enumerate(Yconv):
-                Yconv[idx] = cv2.filter2D(img, -1, sz, borderType=0)
-            MASK = cv2.filter2D(np.ones(Y.shape[1:], dtype='float32'), -1, sz, borderType=0)
-        else:
-            Yconv = convolve(Y, sz[np.newaxis, :], mode='constant')
-            MASK = convolve(np.ones(Y.shape[1:], dtype='float32'), sz, mode='constant')
+        Yconv = convolve(Y, sz[np.newaxis, :], mode='constant')
+        MASK = convolve(np.ones(Y.shape[1:], dtype='float32'), sz, mode='constant')
         Cn = np.mean(Yconv * Y, axis=0) / MASK
         return Cn
 
 
-def local_correlations_fft_slice_sum(imgs, sz=np.ones((3,3)), opencv=True, ndim=3):
-    import cv2
+def local_correlations_fft_slice_sum(imgs, sz=np.ones((3,3)), ndim=3):
     from scipy.ndimage.filters import convolve
     sum_ = np.zeros(imgs.shape[1:])
     for img in imgs:
-        if opencv and ndim==3:
-            sum_ += cv2.filter2D(img, -1, sz, borderType=0)*img
-        else:
-            sum_ += convolve(img, sz, mode='constant')*img
+        sum_ += convolve(img, sz, mode='constant')*img
     return sum_[np.newaxis, :, :],
