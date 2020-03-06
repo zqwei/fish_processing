@@ -5,7 +5,5 @@ dask
 distribution
 dipy
 scikit-image
-keras
 tensorflow
-deprecation
 multiprocess

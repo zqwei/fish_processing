@@ -5,7 +5,6 @@ weiz@janelia.hhmi.org
 '''
 
 import numpy as np
-import deprecation
 
 def roll_scale(x, win_=50001, factor=1):
     import pandas as pd
@@ -144,57 +143,3 @@ def print_spike_detection_report(spk_in_range, spkc_in_range, title_string):
     print('Unfound spikes %d'%(totspk - TPspk))
     print('Extra spikes %d'%(totspk_ - TPspk))
 
-
-@deprecation.deprecated(details="Use detected_window_max_spike function instead")
-def detected_max_spike(m, x_, voltr_, thres=0.4):
-    pred_x_test = m.predict(x_)
-    window_length = x_.shape[1]
-    spkInWindow = pred_x_test>thres
-    spkInWindow = spkInWindow.flatten()
-    spkInWindow[:window_length] = False
-    spkcount_ = np.zeros(voltr_.shape[0]).astype(np.bool)
-    for idx, nspk in enumerate(spkInWindow):
-        if nspk:
-            x__ = voltr_[idx:idx+window_length]
-            spk_idx = np.where(x__ == x__.max()).squeeze()[0]
-            spkcount_[idx+spk_idx] = True
-    return spkcount_
-
-@deprecation.deprecated(details="Use detected_window_max_spike function instead")
-def detected_peak_spikes(m, x_, voltr_, thres=0.4, devoltr_ = None, peakThres=.9, peak_minDist=10, smallPeakThres = 20):
-    import peakutils
-    pred_x_test = m.predict(x_)
-    window_length = x_.shape[1]
-    spkInWindow = pred_x_test>thres
-    spkInWindow = spkInWindow.flatten()
-    spkInWindow[:window_length] = False
-    spkcount_ = np.zeros(voltr_.shape[0]).astype(np.bool)
-    for idx, nspk in enumerate(spkInWindow):
-        if nspk:
-            x__ = voltr_[idx:idx+window_length]
-            spk_idx = peakutils.indexes(x__, thres=peakThres, min_dist=peak_minDist)
-            spkcount_[idx+spk_idx] = True
-    if (devoltr_ is not None) and spkcount_.sum()>0:
-        diff = voltr_ - devoltr_
-        diff_ = diff[spkcount_.astype(np.bool)]
-        thres = np.percentile(diff_, smallPeakThres)
-        spk_diff = diff > thres
-        spkcount_ = np.logical_and(spkcount_, spk_diff)
-    return spkcount_
-
-@deprecation.deprecated(details="Use detected_window_max_spike function instead")
-def _detected_window_max_spike(m, x_, voltr_, peak_wid=2, thres=0.5):
-    pred_x_test = m.predict(x_)
-    spkInWindow = pred_x_test>thres
-    spkInWindow = spkInWindow.flatten()
-    window_length = x_.shape[1]
-    hwin = window_length//2
-    spkInWindow[:window_length] = False
-    spkcount_ = np.zeros(voltr_.shape[0]).astype(np.bool)
-    for idx, nspk in enumerate(spkInWindow):
-        if nspk:
-            x__ = voltr_[idx+hwin-peak_wid:idx+hwin+peak_wid+1]
-            spkcount_[idx+hwin-peak_wid+np.argmax(x__)] = True # first max is set to be spike time
-    # remove neighbouring spikes ---
-    spkcount_[np.where(np.logical_and(spkcount_[:-1], spkcount_[1:]))[0]+1] = False
-    return spkcount_
