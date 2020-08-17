@@ -14,7 +14,7 @@ def parallel_to_single(func1d, arr, *args, **kwargs):
         raise ValueError('Multiprocessing is not running on single core cpu machines, and consider to change code.')
 
     mp_count = arr.shape[0] # fix the error if arr is shorter than cpu counts
-    print(f'Number of processes to parallel: {mp_count}')
+    # print(f'Number of processes to parallel: {mp_count}')
     chunks = [(func1d, sub_arr, args, kwargs)
               for sub_arr in np.array_split(arr, mp_count)]
     pool = mp.Pool(processes=mp_count)
