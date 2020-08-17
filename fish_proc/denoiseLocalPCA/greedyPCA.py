@@ -273,7 +273,7 @@ def vector_acov(Vt,
 
 def compute_svd(M,
                 method='randomized',
-                n_components=2,
+                n_components=6,
                reconstruct=False):
     """
     Decompose array M given parameters.
@@ -316,6 +316,7 @@ def compute_svd(M,
                 os.mkdir('SVD_error')
             np.save(f'SVD_error/SVD_matrix_id{int(random.random()*1e10)}', M)
             U, s, Vt = randomized_svd(M, n_components=n_components)
+                
     elif method == 'randomized':
         U, s, Vt = randomized_svd(M, n_components=n_components,
                 n_iter=7, random_state=None)
@@ -503,11 +504,11 @@ def denoise_patch(M,
         ranks = np.nan
     #ranks = np.where(np.logical_or(vtids[0, :] >= 1, vtids[1, :] == 1))[0]
     if np.all(ranks == np.nan):
-        print('M rank Empty', flush=True)
+        # print('M rank Empty', flush=True)
         rlen = 0
     else:
         rlen = vtids[0,ranks].sum() #len(ranks)
-        print('\tM\trank: %d\trun_time: %f'%(rlen,time.time()-start), flush=True)
+        # print('\tM\trank: %d\trun_time: %f'%(rlen,time.time()-start), flush=True)
     return Yd, rlen
 
 
