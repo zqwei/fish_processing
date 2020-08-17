@@ -104,6 +104,11 @@ def warn_on_large_chunks(x):
     if any(nb > 1e9 for nb in nbytes):
         warnings.warn("Array contains very large chunks")
 
+        
+def print_client_links(cluster):
+    print(f'Scheduler: {cluster.scheduler_address}')
+    print(f'Dashboard link: {cluster.dashboard_link}')
+    return None
 
 
 if __name__ == '__main__':
