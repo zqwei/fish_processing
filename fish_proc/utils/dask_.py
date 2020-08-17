@@ -86,7 +86,7 @@ def setup_workers(numCore=120, is_local=False, dask_tmp=None, memory_limit='auto
         client = Client(cluster)
     else:
         cluster = get_jobqueue_cluster()
-        cluster.adapt(maximum_jobs=10)
+        cluster.adapt(maximum_jobs=numCore)
         client = Client(cluster)
         # cluster.start_workers(numCore)
     return cluster, client
