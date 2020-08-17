@@ -106,7 +106,7 @@ def warn_on_large_chunks(x):
 
         
 def print_client_links(cluster):
-    print(f'Scheduler: {cluster.scheduler_address}')
+    # print(f'Scheduler: {cluster.scheduler_address}')
     print(f'Dashboard link: {cluster.dashboard_link}')
     return None
 
