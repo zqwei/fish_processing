@@ -101,21 +101,33 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         num_t = denoised_data.shape[0]
         
     print('Denoising camera noise -- load saved data')
+    f = open(f'{save_root}/processing.tmp', "a")
+    f.write(f'Denoising camera noise -- load saved data \n')
+    f.close()
     denoised_data = da.from_zarr(f'{save_root}/denoised_data.zarr')
     chunks = denoised_data.shape[1:]
     num_t = denoised_data.shape[0]
 
     # save and compute reference image
     print('Compute reference image ---')
+    f = open(f'{save_root}/processing.tmp', "a")
+    f.write(f'Compute reference image --- \n')
+    f.close()
     if not os.path.exists(f'{save_root}/motion_fix_.h5'):
         med_win = len(denoised_data)//2
         ref_img = denoised_data[med_win-50:med_win+50].mean(axis=0).compute()
         save_h5(f'{save_root}/motion_fix_.h5', ref_img, dtype='float16')
 
     print('--- Done computing reference image')
+    f = open(f'{save_root}/processing.tmp', "a")
+    f.write(f'--- Done computing reference image \n')
+    f.close()
 
     # compute affine transform
     print('Registration to reference image ---')
+    f = open(f'{save_root}/processing.tmp', "a")
+    f.write(f'Registration to reference image --- \n')
+    f.close()
     # create trans_affs file
     if not os.path.exists(f'{save_root}/trans_affs.npy'):
         ref_img = File(f'{save_root}/motion_fix_.h5', 'r')['default'].value
@@ -133,6 +145,9 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
     trans_affine_ = np.load(f'{save_root}/trans_affs.npy')
     trans_affine_ = da.from_array(np.expand_dims(trans_affine_, 3), chunks=(1,4,4,1))
     print('--- Done registration reference image')
+    f = open(f'{save_root}/processing.tmp', "a")
+    f.write(f'--- Done registration reference image \n')
+    f.close()
 
     # apply affine transform
     if not os.path.exists(f'{save_root}/motion_corrected_data.zarr'):
@@ -170,6 +185,9 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
                 del trans_data_t_z
                 gc.collect()
                 print('finishing rechunking time chunk -- %03d of %03d'%(nz, num_t_chunks))
+                f = open(f'{save_root}/processing.tmp', "a")
+                f.write('finishing rechunking time chunk -- %03d of %03d \n'%(nz, num_t_chunks))
+                f.close()
 
         print('Remove temporal files of registration')
         if os.path.exists(f'{save_root}/denoised_data.zarr'):
