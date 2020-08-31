@@ -322,6 +322,9 @@ def compute_cell_raw_dff(block_F, mask, save_root='.', ext='', block_id=None):
     for _ in block_id:
         fsave += '_'+str(_)
     fsave += '_rlt.h5'
+    
+    if os.path.exists(fsave):
+        return np.zeros([1]*4)
 
     A_ = A_[:, A_.sum(axis=0)>0] # remove zero-components
     F_ = block_F.squeeze(axis=0).reshape((x_*y_, -1), order='F')
