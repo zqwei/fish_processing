@@ -28,7 +28,7 @@ def get_local_cluster(dask_tmp=None, memory_limit='auto'):
         return LocalCluster(processes=False, local_dir=dask_tmp, memory_limit=memory_limit)
 
 
-def get_jobqueue_cluster(walltime='12:00', ncpus=1, cores=1, local_directory=None, memory='16GB', env_extra=None, **kwargs):
+def get_jobqueue_cluster(walltime='12:00', ncpus=1, cores=1, local_directory=None, memory='15GB', env_extra=None, **kwargs):
     """
     Instantiate a dask_jobqueue cluster using the LSF scheduler on the Janelia Research Campus compute cluster.
     This function wraps the class dask_jobqueue.LSFCLuster and instantiates this class with some sensible defaults.
@@ -86,7 +86,8 @@ def setup_workers(numCore=120, is_local=False, dask_tmp=None, memory_limit='auto
         client = Client(cluster)
     else:
         cluster = get_jobqueue_cluster()
-        cluster.adapt(maximum_jobs=numCore)
+        # cluster.adapt(maximum_jobs=numCore)
+        cluster.scale(numCore)
         client = Client(cluster)
         # cluster.start_workers(numCore)
     return cluster, client
