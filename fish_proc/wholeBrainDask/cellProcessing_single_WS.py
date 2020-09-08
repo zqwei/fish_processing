@@ -19,7 +19,7 @@ def print_client_links(cluster):
 
 
 def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (4, 4), num_t_chunks = 80,\
-                  dask_tmp=None, memory_limit=0, is_bz2=False, is_singlePlane=False, down_sample_registration=1):
+                  dask_tmp=None, memory_limit=0, is_singlePlane=False, down_sample_registration=1):
     from ..utils.getCameraInfo import getCameraInfo
     from tqdm import tqdm
     from ..utils.fileio import du
@@ -40,65 +40,24 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
     if not os.path.exists(f'{save_root}/denoised_data.zarr'):
         print('========================')
         print('Getting data infos')
-        if not is_bz2:
-            files = sorted(glob(dir_root+'/*.h5'))
-            chunks = File(files[0],'r')['default'].shape
-            print('Stacking data')
-            ### dask.from_array is extremely slow while processing many files
-            ### this is replaced by dask.from_delayed
-            '''
-            if not is_singlePlane:
-                data = da.stack([da.from_array(File(fn,'r')['default'], chunks=chunks) for fn in files])
-            else:
-                if len(chunks)==2:
-                    data = da.stack([da.from_array(File(fn,'r')['default'], chunks=chunks) for fn in files])
-                else:
-                    data = da.concatenate([da.from_array(File(fn,'r')['default'], chunks=(1, chunks[1], chunks[2])) for fn in files], axis=0)
-            '''
-            imread = dask.delayed(lambda v: File(v,'r')['default'].value)
-            lazy_data = [imread(fn) for fn in files]
-            sample = lazy_data[0].compute()
-            if not is_singlePlane:
-                data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
-            else:
-                if len(chunks)==2:
-                    data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
-                else:
-                    data = da.concatenate([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data], axis=0).rechunk((1,-1,-1))
-            
-            
-            cameraInfo = getCameraInfo(dir_root)
+        files = sorted(glob(dir_root+'/*.h5'))
+        chunks = File(files[0],'r')['default'].shape
+        cameraInfo = getCameraInfo(dir_root)
+        print('Stacking data')
+        imread = dask.delayed(lambda v: pixelDenoiseImag(File(v,'r')['default'].value, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo))
+        lazy_data = [imread(fn) for fn in files]
+        sample = lazy_data[0].compute()
+        if not is_singlePlane:
+            denoised_data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
         else:
-            import xml.etree.ElementTree as ET
-            from utils import load_bz2file
-            dims = ET.parse(dir_root+'/ch0.xml')
-            root = dims.getroot()
-            for info in root.findall('info'):
-                if info.get('dimensions'):
-                    dims = info.get('dimensions')
-            dims = dims.split('x')
-            dims = [int(float(num)) for num in dims]
-            files = sorted(glob(dir_root+'/*.stack.bz2'))
-            imread = dask.delayed(lambda v: load_bz2file(v, dims), pure=True)
-            lazy_data = [imread(fn) for fn in files]
-            sample = lazy_data[0].compute()
-            data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
-            cameraInfo = getCameraInfo(dir_root)
-            pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
-            pixel_x0 = pixel_x0-1
-            pixel_y0 = pixel_y0-1
-            cameraInfo['camera_roi'] = '%d_%d_%d_%d'%(pixel_x0, pixel_x1, pixel_y0, pixel_y1)
-            chunks = sample.shape
-        # pixel denoise
+            if len(chunks)==2:
+                denoised_data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
+            else:
+                denoised_data = da.concatenate([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data], axis=0).rechunk((1,-1,-1))        
         print('========================')
         print('Denoising camera noise')
-        if not is_singlePlane:
-            denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo))
-        else:
-            denoised_data = data.map_blocks(lambda v: pixelDenoiseImag(v, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo), new_axis=1)
         print('Denoising camera noise -- save data')
         denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
-        num_t = denoised_data.shape[0]
         
     print('Denoising camera noise -- load saved data')
     f = open(f'{save_root}/processing.tmp', "a")
