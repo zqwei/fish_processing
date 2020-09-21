@@ -5,7 +5,7 @@ from h5py import File
 import warnings
 warnings.filterwarnings('ignore')
 import dask
-dask.config.set({"jobqueue.lsf.use-stdin": True})
+# dask.config.set({"jobqueue.lsf.use-stdin": True})
 import dask.array as da
 from .utils import *
 from ..utils import dask_ as fdask
@@ -124,7 +124,9 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
                     if os.path.exists(save_root_ext+'/motion_corrected_data_chunks_%03d.zarr'%(nz)):
                         continue
                 print('Apply registration to rechunk layer %03d'%(nz))
-                trans_data_ = da.map_blocks(apply_transform3d, denoised_data[n_split], trans_affine_[n_split], chunks=(1, *denoised_data.shape[1:]), dtype='float16')
+                t_start = n_split[0]
+                t_end = n_split[-1]+1
+                trans_data_ = da.map_blocks(apply_transform3d, denoised_data[t_start:t_end], trans_affine_[t_start:t_end], chunks=(1, *denoised_data.shape[1:]), dtype='float16')
                 print('Starting to rechunk layer %03d'%(nz))
                 trans_data_t_z = trans_data_.rechunk((-1, 1, chunks[1]//nsplit[0], chunks[2]//nsplit[1])).transpose((1, 2, 3, 0))
                 # check space availablity
