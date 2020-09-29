@@ -64,6 +64,8 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
     f.write(f'Denoising camera noise -- load saved data \n')
     f.close()
     denoised_data = da.from_zarr(f'{save_root}/denoised_data.zarr')
+    if denoised_data.ndim==3:
+        denoised_data = denoised_data[:, None, :, :]
     chunks = denoised_data.shape[1:]
     num_t = denoised_data.shape[0]
 
