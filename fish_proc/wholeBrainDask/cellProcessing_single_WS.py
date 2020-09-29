@@ -278,7 +278,7 @@ def preprocessing_cluster(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, ns
     return None
 
 
-def detrend_data(dir_root, save_root, window=100, percentile=20, nsplit = (4, 4), dask_tmp=None, memory_limit=0):
+def detrend_data(dir_root, save_root, window=100, percentile=20, dask_tmp=None, memory_limit=0):
     if not os.path.exists(f'{save_root}/detrend_data.zarr'):
         cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
         print_client_links(cluster)
