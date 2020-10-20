@@ -195,12 +195,20 @@ def demix_blocks(block, mask_block, save_folder='.', is_skip=True, block_id=None
     
     if os.path.exists(sup_fname+'_rlt.npz'):
         return np.zeros([1]*4)
-
+    
+    mz, mx, my, mt = block.shape
+    if (mx==1) or (my==1):
+        dims = block.shape
+        np.savez(sup_fname+'_rlt.npz', A=np.zeros([np.prod(dims[:-1]),1]))
+        return np.zeros([1]*4)
+    
     block_img = mask_block.squeeze()
+    
     if block_img.max()==0:
         dims = block.shape
         np.savez(sup_fname+'_rlt.npz', A=np.zeros([np.prod(dims[:-1]),1]))
         return np.zeros([1]*4)
+    
     mx, my = block_img.shape
     img_adapteq = block_img/block_img.max()
     # initial segments

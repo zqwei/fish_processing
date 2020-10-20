@@ -23,9 +23,6 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
     from ..utils.getCameraInfo import getCameraInfo
     from tqdm import tqdm
     from ..utils.fileio import du
-    # set worker
-    cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
-    print_client_links(cluster)
     
     if isinstance(save_root, list):
         save_root_ext = save_root[1]
@@ -38,6 +35,9 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
     print(f'nsplit: {nsplit}')
 
     if not os.path.exists(f'{save_root}/denoised_data.zarr'):
+        # set worker
+        cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
+        print_client_links(cluster)
         print('========================')
         print('Getting data infos')
         files = sorted(glob(dir_root+'/*.h5'))
@@ -58,7 +58,12 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         print('Denoising camera noise')
         print('Denoising camera noise -- save data')
         denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
-        
+        fdask.terminate_workers(cluster, client)
+        time.sleep(30)
+    
+    # set worker
+    cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
+    print_client_links(cluster)
     print('Denoising camera noise -- load saved data')
     f = open(f'{save_root}/processing.tmp', "a")
     f.write(f'Denoising camera noise -- load saved data \n')
@@ -109,12 +114,19 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
     f = open(f'{save_root}/processing.tmp', "a")
     f.write(f'--- Done registration reference image \n')
     f.close()
+    fdask.terminate_workers(cluster, client)
+    time.sleep(30)
 
     # apply affine transform
     if not os.path.exists(f'{save_root}/motion_corrected_data.zarr'):
         # fix memory issue to load data all together for transpose on local machine
         # load data
         # swap axes
+
+        # set worker
+        cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
+        print_client_links(cluster)
+
         splits_ = np.array_split(np.arange(num_t).astype('int'), num_t_chunks)
         print(f'Processing total {num_t_chunks} chunks in time.......')
         # estimate size of data to store
@@ -158,7 +170,8 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         for ext_files in tqdm(glob(save_root_ext+'/motion_corrected_data_chunks_*.zarr')):
             print(f'Moving file {ext_files} to Tmp-file folder.....')
             shutil.move(ext_files, save_root+'/')
-    fdask.terminate_workers(cluster, client)
+        fdask.terminate_workers(cluster, client)
+        time.sleep(60)
     return None
 
 
@@ -168,21 +181,16 @@ def combine_preprocessing(dir_root, save_root, num_t_chunks = 80, dask_tmp=None,
     chunks = da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(0)).chunksize
     trans_data_t = da.concatenate([da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz)) for nz in range(num_t_chunks)], axis=-1)
     trans_data_t = trans_data_t.rechunk((1, chunks[1], chunks[2], -1))
-    trans_data_t.to_zarr(f'{save_root}/motion_corrected_data.zarr')
-    
+    trans_data_t.to_zarr(f'{save_root}/motion_corrected_data.zarr')    
     def rm_tmp(nz, save_root=save_root):
         if os.path.exists(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz)):
             print('Remove temporal files of registration at %03d'%(nz))
             shutil.rmtree(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz))
-        return np.array([1])
-    
-    #     for nz in range(num_t_chunks):
-    #         if os.path.exists(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz)):
-    #             print('Remove temporal files of registration at %03d'%(nz))
-    #             shutil.rmtree(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz))
+        return np.array([1])    
     nz_list = da.from_array(np.arange(num_t_chunks), chunks=(1)) 
     da.map_blocks(rm_tmp, nz_list).compute()
     fdask.terminate_workers(cluster, client)
+    time.sleep(60)
     return None
 
 
@@ -288,6 +296,7 @@ def detrend_data(dir_root, save_root, window=100, percentile=20, dask_tmp=None, 
         Y_d.to_zarr(f'{save_root}/detrend_data.zarr')
         del Y_d
         fdask.terminate_workers(cluster, client)
+        time.sleep(60)
     return None
 
 
@@ -304,6 +313,7 @@ def default_mask(dir_root, save_root, dask_tmp=None, memory_limit=0):
     Y_ave = Y.astype('float').mean(axis=-1, keepdims=True).astype(Y.dtype)
     Y_ave.to_zarr(f'{save_root}/Y_ave.zarr', overwrite=True)
     fdask.terminate_workers(cluster, client)
+    time.sleep(100)
     return None
 
 
@@ -318,7 +328,7 @@ def local_pca_on_mask(save_root, is_dff=False, dask_tmp=None, memory_limit=0):
     Y_svd = da.map_blocks(fb_pca_block, Y_d, mask, dtype='float32')
     Y_svd.to_zarr(f'{save_root}/masked_local_pca_data.zarr', overwrite=True)
     fdask.terminate_workers(cluster, client)
-    time.sleep(10)
+    time.sleep(60)
     return None
 
 
@@ -336,7 +346,7 @@ def demix_cells(save_root, dt, is_skip=True, dask_tmp=None, memory_limit=0):
         os.mkdir(f'{save_root}/sup_demix_rlt/')
     da.map_blocks(demix_blocks, Y_svd.astype('float'), mask.astype('float'), chunks=(1, 1, 1, 1), dtype='int8', save_folder=save_root, is_skip=is_skip).compute()
     fdask.terminate_workers(cluster, client)
-    time.sleep(10)
+    time.sleep(100)
     return None
 
 
@@ -437,6 +447,7 @@ def compute_cell_dff_raw(save_root, mask, dask_tmp=None, memory_limit=0):
         os.makedirs(f'{save_root}/cell_raw_dff')
     da.map_blocks(compute_cell_raw_dff, trans_data_t.astype('float'), mask, dtype='float32', chunks=(1, 1, 1, 1), save_root=save_root, ext='').compute()
     fdask.terminate_workers(cluster, client)
+    time.sleep(100)
     return None
 
 
@@ -539,4 +550,5 @@ def compute_dff_from_f(save_root, min_F=20, window=400, percentile=20, downsampl
     np.savez(save_root+'cell_dff.npz', A=A[~invalid_].astype('float16'), A_loc=A_loc[~invalid_], dFF=dFF[~invalid_].astype('float16'))
     
     fdask.terminate_workers(cluster, client)
+    time.sleep(100)
     return None
