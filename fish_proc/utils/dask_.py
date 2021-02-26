@@ -18,14 +18,10 @@ import warnings
 
 def get_local_cluster(dask_tmp=None, memory_limit='auto'):
     from dask.distributed import LocalCluster
-    # from multiprocessing import cpu_count
-    # n_workers = cpu_count()
     if dask_tmp is None:
-        # return LocalCluster(n_workers=n_workers, processes=False, threads_per_worker=1, memory_limit=memory_limit)
         return LocalCluster(processes=False, memory_limit=memory_limit)
     else:
-        # return LocalCluster(n_workers=n_workers, processes=False, threads_per_worker=1, local_dir=dask_tmp, memory_limit=memory_limit)
-        return LocalCluster(processes=False, local_dir=dask_tmp, memory_limit=memory_limit) #n_workers=30, threads_per_worker=1, 
+        return LocalCluster(processes=False, local_dir=dask_tmp, memory_limit=memory_limit)
 
 
 def get_jobqueue_cluster(walltime='12:00', ncpus=1, cores=1, local_directory=None, memory='15GB', env_extra=None, **kwargs):
@@ -94,8 +90,9 @@ def setup_workers(numCore=120, is_local=False, dask_tmp=None, memory_limit='auto
 
 
 def terminate_workers(cluster, client):
-    client.close()
-    cluster.close()
+    # client.close()
+    # cluster.close() # something wrong with runtime error here
+    client.shutdown()
 
 
 def warn_on_large_chunks(x):
