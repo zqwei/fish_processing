@@ -45,19 +45,51 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
         cameraInfo = getCameraInfo(dir_root)
         print('Stacking data')
         imread = dask.delayed(lambda v: pixelDenoiseImag(File(v,'r')['default'].value, cameraNoiseMat=cameraNoiseMat, cameraInfo=cameraInfo))
-        lazy_data = [imread(fn) for fn in files]
-        sample = lazy_data[0].compute()
-        if not is_singlePlane:
-            denoised_data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
-        else:
-            if len(chunks)==2:
-                denoised_data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
-            else:
-                denoised_data = da.concatenate([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data], axis=0).rechunk((1,-1,-1))        
-        print('========================')
-        print('Denoising camera noise')
-        print('Denoising camera noise -- save data')
-        denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
+        
+        num_files = len(files)
+        splits_ = np.array_split(np.arange(num_files).astype('int'), num_t_chunks)
+        npfiles=np.array(files)
+        
+        for nz, n_split in enumerate(splits_):
+            if not os.path.exists(save_root+'/denoised_data_%03d.zarr'%(nz)):
+                print('Apply denoising to file chunk %03d'%(nz))
+                lazy_data = [imread(fn) for fn in npfiles[n_split]]
+                sample = lazy_data[0].compute()
+                if not is_singlePlane:
+                    denoised_data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
+                else:
+                    if len(chunks)==2:
+                        denoised_data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
+                    else:
+                        denoised_data = da.concatenate([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data], axis=0).rechunk((1,-1,-1))
+                denoised_data.to_zarr(save_root+'/denoised_data_%03d.zarr'%(nz))
+                print('finishing denoising chunk -- %03d of %03d'%(nz, num_t_chunks))
+                f = open(f'{save_root}/processing.tmp', "a")
+                f.write('finishing denoised data chunk -- %03d of %03d \n'%(nz, num_t_chunks))
+                f.close()
+        denoised_data = da.concatenate([da.from_zarr(save_root+'/denoised_data_%03d.zarr'%(nz)) for nz in range(num_t_chunks)])
+        denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')    
+        def rm_tmp(nz, save_root=save_root):
+            if os.path.exists(f'{save_root}/denoised_data_%03d.zarr'%(nz)):
+                print('Remove temporal files of denoise at %03d'%(nz))
+                shutil.rmtree(f'{save_root}/denoised_data_%03d.zarr'%(nz))
+            return np.array([1])    
+        nz_list = da.from_array(np.arange(num_t_chunks), chunks=(1)) 
+        da.map_blocks(rm_tmp, nz_list).compute()
+        
+#         lazy_data = [imread(fn) for fn in files]
+#         sample = lazy_data[0].compute()
+#         if not is_singlePlane:
+#             denoised_data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
+#         else:
+#             if len(chunks)==2:
+#                 denoised_data = da.stack([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data])
+#             else:
+#                 denoised_data = da.concatenate([da.from_delayed(fn, shape=sample.shape, dtype=sample.dtype) for fn in lazy_data], axis=0).rechunk((1,-1,-1))        
+#         print('========================')
+#         print('Denoising camera noise')
+#         print('Denoising camera noise -- save data')
+#         denoised_data.to_zarr(f'{save_root}/denoised_data.zarr')
         fdask.terminate_workers(cluster, client)
         time.sleep(30)
     
@@ -292,7 +324,7 @@ def detrend_data(dir_root, save_root, window=100, percentile=20, dask_tmp=None, 
         print_client_links(cluster)
         print('Compute detrend data ---')
         trans_data_t = da.from_zarr(f'{save_root}/motion_corrected_data.zarr')
-        Y_d = trans_data_t.map_blocks(lambda v: v - baseline(v, window=window, percentile=percentile), dtype='float16')
+        Y_d = trans_data_t.map_blocks(lambda v: v - baseline(v, window=window, percentile=percentile, downsample=window//40), dtype='float16')
         Y_d.to_zarr(f'{save_root}/detrend_data.zarr')
         del Y_d
         fdask.terminate_workers(cluster, client)
