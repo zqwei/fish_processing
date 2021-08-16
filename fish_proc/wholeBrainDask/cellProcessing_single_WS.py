@@ -210,9 +210,9 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
 def combine_preprocessing(dir_root, save_root, num_t_chunks = 80, dask_tmp=None, memory_limit=0):
     cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
     print_client_links(cluster)
-    chunks = da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(0)).chunksize
+    # chunks = da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(0)).chunksize
     trans_data_t = da.concatenate([da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(nz)) for nz in range(num_t_chunks)], axis=-1)
-    trans_data_t = trans_data_t.rechunk((1, chunks[1], chunks[2], -1))
+    # trans_data_t = trans_data_t.rechunk((1, chunks[1], chunks[2], -1))
     trans_data_t.to_zarr(f'{save_root}/motion_corrected_data.zarr')    
     def rm_tmp(nz, save_root=save_root):
         if os.path.exists(f'{save_root}/motion_corrected_data_chunks_%03d.zarr'%(nz)):
