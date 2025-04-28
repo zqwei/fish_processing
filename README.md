@@ -1,5 +1,6 @@
 # Data processing
 This is the data processing used for the calcium and voltage imaging
+Wei, Z. (2025). Voltage/Calcium imaging processing pipeline. Zenodo. https://doi.org/10.5281/zenodo.15293026
 
 ## Example -- whole-brain cell segmenation and zoom-in
 ![Whole brain cell segmenation](docs/example_cell_segments.gif)
