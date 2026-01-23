@@ -98,7 +98,7 @@ def baseline(data, window=100, percentile=15, downsample=10, axis=-1):
     else:
         slices = [slice(None)] * data.ndim
         slices[axis] = slice(0, None, downsample)
-        data_ds = data[slices].astype('float') # fix data type error
+        data_ds = data[tuple(slices)].astype('float') # fix data type error
         baseline_ds = percentile_filter(data_ds, percentile=percentile, size=size)
         interper = interp1d(range(0, data.shape[axis], downsample), baseline_ds, axis=axis, fill_value='extrapolate')
         bl = interper(range(data.shape[axis]))

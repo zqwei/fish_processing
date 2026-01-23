@@ -464,7 +464,7 @@ def check_demix_cells_layer(save_root, nlayer, nsplit = (10, 16), mask=None):
 
 def compute_cell_dff_raw(save_root, mask, dask_tmp=None, memory_limit=0):
     '''
-      1. local pca denoise (\delta F signal)
+      1. local pca denoise (delta F signal)
       2. baseline
       3. Cell weight matrix apply to denoise and baseline
       4. dff
@@ -485,7 +485,7 @@ def compute_cell_dff_raw(save_root, mask, dask_tmp=None, memory_limit=0):
 
 def combine_dff(save_root):
     '''
-      1. local pca denoise (\delta F signal)
+      1. local pca denoise (delta F signal)
       2. baseline
       3. Cell weight matrix apply to denoise and baseline
       4. dff
@@ -523,7 +523,7 @@ def combine_dff(save_root):
 
 def combine_dff_sparse(save_root):
     '''
-      1. local pca denoise (\delta F signal)
+      1. local pca denoise (delta F signal)
       2. baseline
       3. Cell weight matrix apply to denoise and baseline
       4. dff
