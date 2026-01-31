@@ -21,7 +21,7 @@ def get_local_cluster(dask_tmp=None, memory_limit='auto'):
     if dask_tmp is None:
         return LocalCluster(processes=False, memory_limit=memory_limit)
     else:
-        return LocalCluster(processes=False, local_dir=dask_tmp, memory_limit=memory_limit)
+        return LocalCluster(processes=False, local_directory=dask_tmp, memory_limit=memory_limit)
 
 
 def get_jobqueue_cluster(walltime='12:00', ncpus=1, cores=1, local_directory=None, memory='15GB', env_extra=None, **kwargs):
