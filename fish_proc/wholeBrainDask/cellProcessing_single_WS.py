@@ -545,7 +545,7 @@ def combine_dff_sparse(save_root):
             dFF = _['cell_F_s'][()]
             for n_ in range(A.shape[-1]):
                 if np.abs(dFF[n_]).sum()>0:
-                    A_tmp = np.zeros((100, 100))
+                    A_tmp = np.zeros((150, 150))
                     A_loc_list.append(A_loc)
                     x_, y_ = A[:, :, n_].shape
                     A_shape.append(np.array([x_, y_]))
