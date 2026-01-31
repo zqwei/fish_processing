@@ -207,7 +207,7 @@ def preprocessing(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, nsplit = (
     return None
 
 
-def combine_preprocessing(dir_root, save_root, num_t_chunks = 80, dask_tmp=None, memory_limit=0):
+def combine_preprocessing(save_root, num_t_chunks = 80, dask_tmp=None, memory_limit=0):
     cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
     print_client_links(cluster)
     # chunks = da.from_zarr(save_root+'/motion_corrected_data_chunks_%03d.zarr'%(0)).chunksize
@@ -318,7 +318,7 @@ def preprocessing_cluster(dir_root, save_root, cameraNoiseMat=cameraNoiseMat, ns
     return None
 
 
-def detrend_data(dir_root, save_root, window=100, percentile=20, dask_tmp=None, memory_limit=0):
+def detrend_data(save_root, window=100, percentile=20, dask_tmp=None, memory_limit=0):
     if not os.path.exists(f'{save_root}/detrend_data.zarr'):
         cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
         print_client_links(cluster)
@@ -332,7 +332,7 @@ def detrend_data(dir_root, save_root, window=100, percentile=20, dask_tmp=None, 
     return None
 
 
-def default_mask(dir_root, save_root, dask_tmp=None, memory_limit=0):
+def default_mask(save_root, dask_tmp=None, memory_limit=0):
     cluster, client = fdask.setup_workers(is_local=True, dask_tmp=dask_tmp, memory_limit=memory_limit)
     print_client_links(cluster)
     print('Compute default mask ---')
