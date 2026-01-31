@@ -9,7 +9,7 @@ tmp*
 *.csv
 *.ows
 depreciated
-# tests
+tests
 
 # ignore all local data
 Data
