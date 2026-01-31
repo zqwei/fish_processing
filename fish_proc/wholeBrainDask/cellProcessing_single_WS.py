@@ -501,9 +501,9 @@ def combine_dff(save_root):
             _ = File(_)
         except:
             continue
-        A_loc = _['A_loc'].value
-        A = _['A'].value
-        dFF = _['cell_F'].value
+        A_loc = _['A_loc'][()]
+        A = _['A'][()]
+        dFF = _['cell_F'][()]
         for n_ in range(A.shape[-1]):
             if np.abs(dFF[n_]).sum()>0:
                 A_tmp = np.zeros((100, 100))
@@ -539,10 +539,10 @@ def combine_dff_sparse(save_root):
             _ = File(_)
         except:
             continue
-        A_loc = _['A_loc'].value
+        A_loc = _['A_loc'][()]
         try:
-            A = _['A_s'].value
-            dFF = _['cell_F_s'].value
+            A = _['A_s'][()]
+            dFF = _['cell_F_s'][()]
             for n_ in range(A.shape[-1]):
                 if np.abs(dFF[n_]).sum()>0:
                     A_tmp = np.zeros((100, 100))
