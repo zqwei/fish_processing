@@ -4,7 +4,7 @@ import os, sys
 
 def pixelDenoiseImag(img, cameraNoiseMat='', cameraInfo=None):
     from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
-    from scipy.ndimage.filters import median_filter
+    from scipy.ndimage import median_filter
     win_ = 3
     pixel_x0, pixel_x1, pixel_y0, pixel_y1 = [int(_) for _ in cameraInfo['camera_roi'].split('_')]
     pixel_x = (pixel_x0, pixel_x1)
@@ -62,7 +62,7 @@ def estimate_translation2d(moving, fixed=None, to3=True):
 
 
 def apply_transform3d(mov, affs):
-    from scipy.ndimage.interpolation import affine_transform
+    from scipy.ndimage import affine_transform
     return np.expand_dims(affine_transform(mov.squeeze(axis=0), affs.squeeze(axis=(0, 3))), 0)
 
 
@@ -86,7 +86,7 @@ def save_h5_rescale(filename, data, reset_max_int=65535):
 
 
 def baseline(data, window=100, percentile=15, downsample=10, axis=-1):
-    from scipy.ndimage.filters import percentile_filter
+    from scipy.ndimage import percentile_filter
     from scipy.interpolate import interp1d
     from numpy import ones
 

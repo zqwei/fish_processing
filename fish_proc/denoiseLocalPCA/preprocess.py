@@ -2,7 +2,7 @@ import scipy
 
 import numpy as np
 import scipy.interpolate as interp
-import scipy.ndimage.filters as filt
+import scipy.ndimage as ndi
 import matplotlib.pyplot as plt
 
 
@@ -21,13 +21,13 @@ def flag_outliers(signal,
     keep_idx = abs(signal - np.median(signal)) < thresh_stdv * np.std(signal)
 
     # minimum filter removes pixels within buffer distance of outliers
-    keep_idx = filt.minimum_filter(keep_idx, size=2 * buffer + 1)
+    keep_idx = ndi.minimum_filter(keep_idx, size=2 * buffer + 1)
 
     # Plot flagged outliers -- hacky so may break if params unreasonable
     if visualize:
         fig = plt.figure(figsize=(16, 4))
 
-        trans_idx = np.argwhere(filt.convolve1d(keep_idx, np.array([1, -1])))
+        trans_idx = np.argwhere(ndi.convolve1d(keep_idx, np.array([1, -1])))
         for idx in range(len(trans_idx)):
             if idx == 0:
                 plt_idx = np.arange(0, trans_idx[idx])
@@ -55,7 +55,7 @@ def flag_outliers(signal,
     del_idx = np.argwhere(~keep_idx)
 
     # list of indices where samples were cutout (possible discontinuities)
-    disc_idx = np.argwhere(filt.convolve1d(
+    disc_idx = np.argwhere(ndi.convolve1d(
         keep_idx, np.array([1, -1]))[keep_idx])
 
     return del_idx, disc_idx
@@ -67,7 +67,7 @@ def _get_knots(stim,
                spacing=250):
 
     # Locate transition indices
-    trans_idx = np.argwhere(filt.convolve1d(stim > 0, np.array([1, -1])))
+    trans_idx = np.argwhere(ndi.convolve1d(stim > 0, np.array([1, -1])))
     # Repeat knots and add transition extras
     knots = np.append(np.append(np.zeros(k + 1),
                                 np.sort(np.append(np.repeat(trans_idx, k),
@@ -184,7 +184,7 @@ def detrend(mov,
     disc_idx[1:] = disc_idx[1:] - np.cumsum(np.ones(len(disc_idx) - 1) * 3)
     disc_idx = disc_idx - 1
     disc_idx = np.append(disc_idx,
-                         np.argwhere(filt.convolve1d(stim > 0,
+                         np.argwhere(ndi.convolve1d(stim > 0,
                                                      np.array([1, -1]))))
     return mov_detr, trend, stim, np.unique(disc_idx)
 
@@ -215,7 +215,7 @@ def _get_photobleach_trend(trend_components, disc_idx, stim, all_quad=False):
         photobleach related fluorescence decay
     """
     disc_idx = np.setdiff1d(disc_idx, np.argwhere(
-        scipy.ndimage.filters.convolve(stim > 0, np.array([1, -1]))))
+        ndi.convolve(stim > 0, np.array([1, -1]))))
     stim_off = stim <= 0
     bleach_trend = np.zeros(trend_components.shape)
 

@@ -1,9 +1,16 @@
-numpy
-scipy
-matplotlib
-dask
-distribution
-dipy
-scikit-image
-tensorflow
-multiprocess
+numpy>=2.0
+scipy>=1.13
+matplotlib>=3.8
+h5py>=3.10
+dask[array]>=2024.8
+distributed>=2024.8
+zarr>=2.17
+scikit-image>=0.23
+scikit-learn>=1.4
+networkx>=3.3
+psutil>=5.9
+tqdm>=4.66
+dipy>=1.9
+pandas>=2.2
+statsmodels>=0.14
+tensorflow>=2.18; python_version < "3.13"

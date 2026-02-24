@@ -103,7 +103,7 @@ def run_single_to_files(blocks, files, maxlag=5, confidence=0.999, greedy=False,
 
 def combine_blocks(block_data, block_size, block_corrs):
     block_mat = np.zeros(block_size)
-    block_count = block_mat.copy().astype(np.int)
+    block_count = block_mat.copy().astype(int)
     for ndata, ncorr in zip(block_data, block_corrs):
         _, z_arr, x_arr, y_arr = ncorr
         block_mat[z_arr.min():z_arr.max()+1, x_arr.min():x_arr.max()+1, y_arr.min():y_arr.max()+1, :] += ndata
@@ -113,8 +113,8 @@ def combine_blocks(block_data, block_size, block_corrs):
 
 def combine_blocks_from_files(block_data_files, block_size, block_corrs):
     block_mat = np.zeros(block_size)
-    block_count = block_mat.copy().astype(np.int)
-    block_ranks = block_mat.copy().astype(np.int)
+    block_count = block_mat.copy().astype(int)
+    block_ranks = block_mat.copy().astype(int)
     for nfile, ncorr in zip(block_data_files, block_corrs):
         _ = np.load(nfile)
         ndata = _['Yds']

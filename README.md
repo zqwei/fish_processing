@@ -8,7 +8,15 @@ Wei, Z. (2025). Voltage/Calcium imaging processing pipeline. Zenodo. https://doi
 ![Zoom-in](docs/example_cell_segments_small.gif)
 
 ## Environment setup
-The dependent python packages are listed in `requirements.txt`, which should be all included in a major anaconda package.
+Install core dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+If you need spike detection models (`fish_proc.spikeDetectionNN`), install optional extras:
+```bash
+pip install ".[spike]"
+```
 
 Current parallel processing is based on Dask.
 

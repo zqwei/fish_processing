@@ -33,7 +33,7 @@ def noise_level(mov_wf, range_ff =[0.25,0.5]):
 
 def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, is_mp=True):
     from .np_mp import parallel_to_chunks
-    from scipy.ndimage.filters import convolve
+    from scipy.ndimage import convolve
     if swap_dim:
         Y = np.transpose(
             Y, tuple(np.hstack((Y.ndim - 1, list(range(Y.ndim))[:-1]))))
@@ -65,7 +65,7 @@ def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, is_mp=True):
         MASK = convolve(np.ones(Y.shape[1:], dtype='float32'), sz, mode='constant')
         return sum_.sum(axis=0)/MASK/len_
     else:
-        from scipy.ndimage.filters import convolve
+        from scipy.ndimage import convolve
         Yconv = convolve(Y, sz[np.newaxis, :], mode='constant')
         MASK = convolve(np.ones(Y.shape[1:], dtype='float32'), sz, mode='constant')
         Cn = np.mean(Yconv * Y, axis=0) / MASK
@@ -73,7 +73,7 @@ def local_correlations_fft(Y, eight_neighbours=True, swap_dim=True, is_mp=True):
 
 
 def local_correlations_fft_slice_sum(imgs, sz=np.ones((3,3)), ndim=3):
-    from scipy.ndimage.filters import convolve
+    from scipy.ndimage import convolve
     sum_ = np.zeros(imgs.shape[1:])
     for img in imgs:
         sum_ += convolve(img, sz, mode='constant')*img

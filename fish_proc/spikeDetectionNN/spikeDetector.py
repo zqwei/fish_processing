@@ -7,12 +7,6 @@ Acknowledgement for example code
 https://gist.github.com/philipperemy/b8a7b7be344e447e7ee6625fe2fdd765
 '''
 import numpy as np
-from tensorflow.keras.layers import RepeatVector, Bidirectional, TimeDistributed
-from tensorflow.keras.layers import Dropout, Dense
-from tensorflow.keras.layers import LSTM
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.models import load_model
-from tensorflow.keras.utils import plot_model
 
 
 def prepare_sequences_center(x_train, y_train, window_length,peak_wid=0):
@@ -28,10 +22,18 @@ def prepare_sequences_center(x_train, y_train, window_length,peak_wid=0):
         contain_outlier = target_seq[window_mid-peak_wid:window_mid+peak_wid+1].sum()>0
         outliers.append(contain_outlier)
         windows.append(window)
-    return np.expand_dims(np.array(windows), axis=2), np.array(outliers).astype(np.bool)
+    return np.expand_dims(np.array(windows), axis=2), np.array(outliers).astype(bool)
 
 
 def create_lstm_model(hidden_dim, window_length, m=1):
+    try:
+        from tensorflow.keras.layers import Bidirectional, Dropout, Dense, LSTM
+        from tensorflow.keras.models import Sequential
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "TensorFlow is required for spikeDetectionNN. Install with: pip install '.[spike]'"
+        ) from exc
+
     model = Sequential()
     model.add(Bidirectional(LSTM(hidden_dim, return_sequences=True, use_bias=True), input_shape=(window_length, m)))
     model.add(Dropout(rate=0.2))
@@ -39,4 +41,3 @@ def create_lstm_model(hidden_dim, window_length, m=1):
     model.add(Dense(1, activation='sigmoid', use_bias=True)) # bias_initializer='zeros'
     model.compile(loss='binary_crossentropy', optimizer='adam')
     return model
-

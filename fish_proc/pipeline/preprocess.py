@@ -8,7 +8,7 @@ from skimage.io import imsave
 def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=False):
     from ..utils import getCameraInfo
     from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
-    from scipy.ndimage.filters import median_filter
+    from scipy.ndimage import median_filter
     from skimage import io
     from ..utils.memory import clear_variables
     import os
@@ -42,7 +42,7 @@ def pixel_denoise(folderName, imgFileName, fishName, cameraNoiseMat, plot_en=Fal
 def pixel_denoise_img_seq(folderName, fishName, cameraNoiseMat, plot_en=False):
     from ..utils import getCameraInfo
     from ..pixelwiseDenoising.simpleDenioseTool import simpleDN
-    from scipy.ndimage.filters import median_filter
+    from scipy.ndimage import median_filter
     from glob import glob
     from skimage import io
 

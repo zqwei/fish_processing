@@ -90,7 +90,7 @@ def plot_spks(plt, spkcount, ratio, label='Raw spike time'):
 def plot_test_performance(m, x_test, labels, plt):
     import seaborn as sns
     pred_x_test = m.predict(x_test)
-    labels = labels.astype(np.bool)
+    labels = labels.astype(bool)
     sns.distplot(pred_x_test[labels], label='Spike')
     sns.distplot(pred_x_test[~labels], label='None-Spike')
     sns.despine()
@@ -105,7 +105,7 @@ def detected_window_max_spike(pred_x, voltr, window_length = 41, peak_wid=2, thr
     spkInWindow = spkInWindow.flatten()
     hwin = window_length//2
     # spkInWindow[:window_length] = False
-    spkcount = np.zeros(voltr.shape[0]).astype(np.bool)
+    spkcount = np.zeros(voltr.shape[0]).astype(bool)
     spkprob = np.zeros(voltr.shape[0])
     for idx, nspk in enumerate(spkInWindow):
         if nspk:
@@ -142,4 +142,3 @@ def print_spike_detection_report(spk_in_range, spkc_in_range, title_string):
     print('Found spikes %d'%(TPspk))
     print('Unfound spikes %d'%(totspk - TPspk))
     print('Extra spikes %d'%(totspk_ - TPspk))
-

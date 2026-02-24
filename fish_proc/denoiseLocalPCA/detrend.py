@@ -1,7 +1,7 @@
 from .preprocess import _get_spline_trend
 import numpy as np
 from scipy.signal import butter, lfilter
-from scipy.ndimage import filters
+import scipy.ndimage as ndi
 
 def detrend(mov,
             stim=None,
@@ -39,7 +39,7 @@ def detrend(mov,
         disc_idx[1:] = disc_idx[1:] - np.cumsum(np.ones(len(disc_idx) - 1) * 3)
         disc_idx = disc_idx - 1
         disc_idx = np.append(disc_idx,
-                             np.argwhere(filters.convolve1d(stim > 0,
+                             np.argwhere(ndi.convolve1d(stim > 0,
                                                          np.array([1, -1]))))
     return mov_detr, trend, stim, np.unique(disc_idx)
 

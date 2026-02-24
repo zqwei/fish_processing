@@ -38,11 +38,13 @@ def _fft_estimator(signal, freq_range=[0.25, 0.5], max_samples=3072):
     # Subsample signal if length > max_samples
     len_signal = len(signal)
     if len_signal > max_samples:
+        edge = int(np.divide(max_samples, 3))
+        center_start = int(np.divide(len_signal, 2) - max_samples / 3 / 2)
+        center_stop = int(np.divide(len_signal, 2) + max_samples / 3 / 2)
         signal = np.concatenate(
-            (signal[1:np.int(np.divide(max_samples, 3)) + 1],
-             signal[np.int(np.divide(len_signal, 2) - max_samples / 3 / 2):
-                    np.int(np.divide(len_signal, 2) + max_samples / 3 / 2)],
-             signal[-np.int(np.divide(max_samples, 3)):]),
+            (signal[1:edge + 1],
+             signal[center_start:center_stop],
+             signal[-edge:]),
             axis=-1)
         len_signal = len(signal)
 
@@ -200,8 +202,9 @@ def _keep_min_consec(seq, min_consec=2):
     for reach in np.arange(min_consec):
         keep_idx_tmp = np.ones(len(idx), dtype=bool)
         for inc in np.arange(min_consec):
-            keep_idx_tmp = np.logical_and(keep_idx_tmp,
-                                          np.in1d(idx - reach + inc, idx))
+            keep_idx_tmp = np.logical_and(
+                keep_idx_tmp, np.isin(idx - reach + inc, idx)
+            )
         keep_idx = np.logical_or(keep_idx,
                                  keep_idx_tmp)
     seq[idx[~keep_idx]] = 0

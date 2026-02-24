@@ -315,7 +315,7 @@ def make_mask(corr_img_all_r, corr, mask_a, num_plane=1,times=10,max_allow_neuro
             corr = corr_ini;
             if mask_a[:,:,kk,ii].sum()>0:
                 while jj<=times:
-                    labeled_array, num_features = scipy.ndimage.measurements.label(corr_img_all_r[:,:,kk,ii] > corr,structure=s);
+                    labeled_array, num_features = scipy.ndimage.label(corr_img_all_r[:,:,kk,ii] > corr, structure=s);
                     u, indices, counts = np.unique(labeled_array*mask_a[:,:,kk,ii], return_inverse=True, return_counts=True);
                     if len(u)==1:
                         labeled_array = np.zeros(labeled_array.shape);

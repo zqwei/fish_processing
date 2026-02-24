@@ -58,11 +58,13 @@ def fft_estimator(signal, freq_range=[0.25, 0.5], max_samples=3072):
     # Subsample signal if length > max_samples
     len_signal = len(signal)
     if len_signal > max_samples:
+        edge = int(np.divide(max_samples, 3))
+        center_start = int(np.divide(len_signal, 2) - max_samples / 3 / 2)
+        center_stop = int(np.divide(len_signal, 2) + max_samples / 3 / 2)
         signal = np.concatenate(
-            (signal[1:np.int(np.divide(max_samples, 3)) + 1],
-             signal[np.int(np.divide(len_signal, 2) - max_samples / 3 / 2):
-                    np.int(np.divide(len_signal, 2) + max_samples / 3 / 2)],
-             signal[-np.int(np.divide(max_samples, 3)):]),
+            (signal[1:edge + 1],
+             signal[center_start:center_stop],
+             signal[-edge:]),
             axis=-1)
         len_signal = len(signal)
 
@@ -240,8 +242,10 @@ def get_noise_fft(Y, noise_range=[0.25, 0.5], noise_method='logmexp', max_num_sa
     # Y=np.array(Y,dtype=np.float64)
 
     if T > max_num_samples_fft:
+        center_start = int(T // 2 - max_num_samples_fft / 3 / 2)
+        center_stop = int(T // 2 + max_num_samples_fft / 3 / 2)
         Y = np.concatenate((Y[..., 1:max_num_samples_fft // 3 + 1],
-                            Y[..., np.int(T // 2 - max_num_samples_fft / 3 / 2):np.int(T // 2 + max_num_samples_fft / 3 / 2)],
+                            Y[..., center_start:center_stop],
                             Y[..., -max_num_samples_fft // 3:]), axis=-1)
         T = np.shape(Y)[-1]
 
